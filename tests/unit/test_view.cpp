@@ -280,6 +280,55 @@ void test_hit_testing_and_painting() {
     CHECK(selected.fills == plain_fills + 1);
 }
 
+// Painted text and caret must follow every block, however many are empty.
+void test_consecutive_empty_paragraphs() {
+    fixture f;
+    f.target.set_viewport_width(1000);
+    f.target.insert_text(U"Hello");
+    const int first_line = f.target.caret_rect().y;
+    f.target.insert_paragraph();
+    const int second_line = f.target.caret_rect().y;
+    f.target.insert_paragraph();
+    const int third_line = f.target.caret_rect().y;
+    f.target.insert_paragraph();
+    const int fourth_line = f.target.caret_rect().y;
+    CHECK(second_line > first_line);
+    CHECK(third_line > second_line);
+    CHECK(fourth_line > third_line);
+    const int margin = f.target.caret_rect().x;
+    f.target.insert_text(U"typed");
+    CHECK(f.target.caret_rect().x > margin);
+    CHECK(f.target.caret_rect().y == fourth_line);
+    recording_painter painter;
+    f.target.draw(painter, 0, 0, 1000, 800);
+    CHECK((painter.text == std::vector<std::string>{"Hello", "typed"}));
+    CHECK(f.target.position_at(f.target.caret_rect().x,
+                               f.target.caret_rect().y + 2) ==
+          f.target.point());
+}
+
+// Undo and redo restore blocks through the same change records.
+void test_empty_paragraphs_survive_undo() {
+    fixture f;
+    f.target.set_viewport_width(1000);
+    f.target.insert_text(U"Hello");
+    f.target.insert_paragraph();
+    f.target.insert_paragraph();
+    const int third_line = f.target.caret_rect().y;
+    f.target.insert_text(U"typed");
+    f.target.undo();
+    f.target.undo();
+    f.target.undo();
+    f.target.redo();
+    f.target.redo();
+    CHECK(f.target.caret_rect().y == third_line);
+    f.target.redo();
+    CHECK(f.text() == U"Hello\n\ntyped");
+    recording_painter painter;
+    f.target.draw(painter, 0, 0, 1000, 800);
+    CHECK((painter.text == std::vector<std::string>{"Hello", "typed"}));
+}
+
 void test_zoom_keeps_layout() {
     fixture f;
     std::u32string text;
@@ -315,6 +364,8 @@ int main() {
     test_find_and_replace();
     test_replace_with_containing_text_terminates();
     test_hit_testing_and_painting();
+    test_consecutive_empty_paragraphs();
+    test_empty_paragraphs_survive_undo();
     test_zoom_keeps_layout();
     test_unknown_command();
     return testing::summary("view");

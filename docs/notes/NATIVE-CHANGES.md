@@ -25,3 +25,9 @@ per-backend status.
 - With a canvas focused, X-family menu shortcuts never fired, because keys taken
   by the canvas skip the toolkit's accelerators. `dispatch_x_keyboard` honors them.
 - GEM's press path never focused a canvas, so nothing could be typed into one.
+
+## Square icon tools
+
+`toolbar` tools with an icon and no text are square, as long as the strip
+is thick, in the shared `item_bounds` layout. `get_item_bounds(id)` exposes
+a tool's rectangle.

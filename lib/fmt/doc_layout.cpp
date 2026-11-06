@@ -124,11 +124,12 @@ void doc_layout::on_change(const change_record &record) {
             return;
         }
         {
-            // The new block splits off the end of the previous one.
+            // The new block splits off the end of the previous one. It
+            // is not in blocks_ yet, so the block before it is the last
+            // one starting before its position, empty or not.
             const auto *added = static_cast<const frag_strux *>(
                 document_.table().frags().find(record.pos));
-            const std::size_t index =
-                record.pos > 1 ? block_index_at(record.pos - 1) : 0;
+            const std::size_t index = block_index_at(record.pos);
             if (index < blocks_.size())
                 blocks_[index]->mark_dirty();
             blocks_.insert(
