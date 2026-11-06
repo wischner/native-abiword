@@ -1,0 +1,22 @@
+SRCDIR := $(ROOT)/src
+OBJDIR := $(OBJROOT)/src
+APP_SRC := $(wildcard $(SRCDIR)/app/*.cpp)
+APP_OBJ := $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(APP_SRC))
+UI_SRC := $(wildcard $(SRCDIR)/ui/*.cpp)
+UI_OBJ := $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(UI_SRC))
+.PHONY: all headless
+all: $(TARGET)
+headless: $(HEADLESS_TARGET)
+$(TARGET): $(OBJDIR)/main.o $(APP_OBJ) $(UI_OBJ) $(LINK_LIBS) $(NATIVE_ARCHIVE)
+	@mkdir -p $(dir $@)
+	$(CXX) $^ $(LDFLAGS) $(NATIVE_LDLIBS) -Wl,-rpath,'$$ORIGIN/../build/sdk/usr/lib/x86_64-linux-gnu' -o $@
+$(HEADLESS_TARGET): $(OBJDIR)/main_headless.o $(APP_OBJ) $(LINK_LIBS)
+	@mkdir -p $(dir $@)
+	$(CXX) $^ $(LDFLAGS) -o $@
+$(OBJDIR)/main_headless.o: $(SRCDIR)/main.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -DFYODOR_HEADLESS -MMD -MP -c $< -o $@
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/Makefile $(ROOT)/Makefile
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -isystem $(NATIVE_ROOT)/include -I$(SRCDIR)/ui -I$(OBJDIR) -MMD -MP -c $< -o $@
+-include $(APP_OBJ:.o=.d) $(UI_OBJ:.o=.d) $(OBJDIR)/main.d $(OBJDIR)/main_headless.d
