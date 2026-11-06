@@ -18,6 +18,7 @@ What has moved from AbiWord `6940426ea` and what has not.
 | `fb_ColumnBreaker`, `fp_Page`, `fp_Column` | `lib/fmt/column_breaker`, `doc_layout` | |
 | `ie_imp_AbiWord_1`, `ie_exp_AbiWord_1` | `lib/impexp/abw_*` | |
 | `ie_imp_Text`, `ie_exp_Text` | `lib/impexp/text_format` | UTF-8 only |
+| `ap_Toolbar_Icons`, `xap_Toolbar_Icons` | `src/ui/tool_icons`, `src/resources` | 17 original designs; Native resource selection replaces XPM/platform tables; GEM/X11 binary masks |
 | `ie_exp_HTML` | `lib/impexp/html_exporter` | Subset; images are not exported |
 
 ## Not ported

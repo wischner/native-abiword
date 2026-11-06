@@ -20,13 +20,18 @@ make debug -j8               # bin/fyodor-debug with sanitizers
 make clean                   # remove build/ and bin/
 ```
 
-Dependencies: Linux, GCC with C++20, GNU make, `flock`, CMake 3.20 and Python 3.
+Dependencies: Linux, GCC with C++20, GNU make 4.3+, `flock`, CMake 3.20 and Python 3.
 Native comes from the sibling `../native` checkout; override with
 `NATIVE_ROOT=/path/to/native`. On Ubuntu without development headers the build
 fetches them into `build/sdk/` and installs nothing.
 
 **VS Code F5** builds and debugs the selected backend. Profiles are named
 `<name>, <env>`: `SDL2, Local`, `X11, Xephyr`, `GEM, Rasta` and so on.
+
+Toolbar graphics are embedded with Native's resource compiler. GEM and X11
+automatically select black-and-white icons; Native supplies menu and toolbar
+highlights. See [graphics resources](src/resources/README.md) for regeneration
+and cross-build details.
 
 All application UI goes through Native's public API. The default build selects
 Native's SDL2 backend; `make platform-test` builds the others. See

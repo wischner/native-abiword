@@ -132,8 +132,49 @@ controls, and application UI needs are met by extending them. The format
 toolbar hosts its font, size and style boxes through `tool_kind::control`. The
 rulers are plain `native::ruler` objects: their margin, indent and tab markers
 are `ruler_marker`s, and a finished drag becomes a document change in
-`main_window`. Toolbar icons are new 16×16 designs drawn through Native's `gpx`,
-not AbiWord's XPM artwork.
+`main_window`. Toolbar icons are original 16×16 designs exported through
+Native's `gpx` into color PNGs and binary ink masks. Native `rc` embeds both in
+one resource pack; `native::resources::get()` selects monochrome for GEM and
+X11. Menus, toolbar highlights and selected-mask tinting belong to Native's
+theme. Disabled masks are painted through `theme::draw_toolbar_icon`, so
+GEM uses a visible binary stipple instead of a gray tint that disappears.
+See [graphics resources](../src/resources/README.md).
+
+The status bar is associated with both the window and its document canvas.
+Native chooses the canvas as its host on GEM, placing the strip above the
+horizontal scrollbar and beside the vertical one. Other backends keep the
+window footer. Fyodor uses `theme::get_status_bar_height()` after window
+creation; it no longer supplies a fixed 24-pixel application height.
+The GEM theme follows Gemscape and Ted's application-band metric (20 pixels
+with the current SDK). Before window creation, Fyodor parents the document
+canvas and calls `set_scroll_content(&canvas_)`. This single source path lets
+Native select platform scrolling. GEM uses real AES frame scrollbars, with
+the status strip ending at the work-area edge; there is no duplicate canvas
+track or blank bottom strip. Other backends retain their existing canvas
+scrollbars. Fyodor contains no toolkit-specific sizing or visibility branch.
+
+After an edit, the window reads current document state but only assigns changed
+toolbar, combo-box and ruler values. Some Native setters invalidate even when
+given the current value. Avoiding those calls keeps a text edit from expanding
+GEM's coalesced dirty rectangle across the surrounding controls. The canvas
+updates content bounds only when they change and otherwise invalidates its
+client area. Caret blinking invalidates just the visible caret rectangle and
+reuses the document back buffer.
+
+### Document selection uses Native
+
+The view computes selected line rectangles, but owns no selection palette.
+`gfx::painter::draw_selection` delegates the background and foreground to the
+UI adapter. `native_painter` calls Native's `theme::draw_selection` and uses
+its selection foreground for text and decorations. GEM and X11 therefore
+use solid black with white text instead of dithering a fixed blue fill.
+
+Selection is painted after normal document content. Each selected line is
+redrawn under a clip, preserving glyph positions even when the selection
+starts inside a word. During that redraw, document background fills are
+suppressed and text/decorations use selection ink. Stored document formatting
+is unchanged. Native's scoped graphics state restores the clip and drawing
+attributes, including when painting throws.
 
 ### One test source for every backend
 

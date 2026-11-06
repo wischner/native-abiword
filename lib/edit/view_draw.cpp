@@ -24,7 +24,6 @@ constexpr int page_gap = 16;
 constexpr util::color paper{255, 255, 255};
 constexpr util::color edge{120, 120, 120};
 constexpr util::color shadow{90, 90, 90};
-constexpr util::color highlight{173, 214, 255};
 
 } // namespace
 
@@ -117,11 +116,19 @@ void view::draw_selection(gfx::painter &target, const fmt::page &sheet,
         if (right <= left)
             continue;
         const int x = origin_x + util::lu_to_device(left, dpi);
-        target.fill_rect(
+        target.draw_selection(
             {x, origin_y + util::lu_to_device(placed.y, dpi),
              origin_x + util::lu_to_device(right, dpi) - x,
              std::max(1, util::lu_to_device(placed.item->height(), dpi))},
-            highlight);
+            [&](gfx::painter &selected) {
+                // Redraw the complete line under the selection clip so
+                // partial words keep their original glyph positioning.
+                placed.item->draw(
+                    selected,
+                    origin_x + util::lu_to_device(placed.column_x, dpi),
+                    origin_y + util::lu_to_device(
+                        placed.y + placed.item->baseline(), dpi));
+            });
     }
 }
 
@@ -145,7 +152,6 @@ void view::draw(gfx::painter &target, int scroll_x, int scroll_y, int width,
                          shadow);
         target.fill_rect({left, top, sheet_width, sheet_height}, paper);
         target.frame_rect({left, top, sheet_width, sheet_height}, edge);
-        draw_selection(target, sheet, left, top);
         for (const fmt::placed_line &placed : sheet.lines) {
             const int line_top = top + util::lu_to_device(placed.y, dpi);
             const int line_height =
@@ -157,6 +163,7 @@ void view::draw(gfx::painter &target, int scroll_x, int scroll_y, int width,
                 top + util::lu_to_device(
                           placed.y + placed.item->baseline(), dpi));
         }
+        draw_selection(target, sheet, left, top);
     }
 }
 

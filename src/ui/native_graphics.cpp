@@ -255,18 +255,20 @@ native_painter::native_painter(native::gpx &target, double device_per_inch,
 
 void native_painter::fill_rect(const gfx::device_rect &bounds,
                                util::color color) {
+    if (selection_ink_)
+        return;
     target_.set_ink(to_rgba(color)).draw_rect(to_rect(bounds), true);
 }
 
 void native_painter::frame_rect(const gfx::device_rect &bounds,
                                 util::color color) {
-    target_.set_ink(to_rgba(color)).set_pen(1);
+    target_.set_ink(selection_ink_.value_or(to_rgba(color))).set_pen(1);
     target_.draw_rect(to_rect(bounds), false);
 }
 
 void native_painter::draw_line(int x1, int y1, int x2, int y2,
                                util::color color, int thickness) {
-    target_.set_ink(to_rgba(color))
+    target_.set_ink(selection_ink_.value_or(to_rgba(color)))
         .set_pen(static_cast<std::uint8_t>(std::clamp(thickness, 1, 16)));
     target_.draw_line(native::point(to_coord(x1), to_coord(y1)),
                       native::point(to_coord(x2), to_coord(y2)));
@@ -279,7 +281,7 @@ void native_painter::draw_text(const gfx::font &face,
         static_cast<const native_font &>(face).at_resolution(dpi_);
     if (!font.valid())
         return;
-    target_.set_font(font).set_ink(to_rgba(color));
+    target_.set_font(font).set_ink(selection_ink_.value_or(to_rgba(color)));
     target_.draw_text(
         util::to_utf8(text),
         native::point(to_coord(x),
@@ -293,6 +295,24 @@ void native_painter::draw_image(std::string_view data_name,
         target_.draw_img(*image, to_rect(bounds));
     else
         frame_rect(bounds, {128, 128, 128});
+}
+
+void native_painter::draw_selection(
+    const gfx::device_rect &bounds,
+    const std::function<void(gfx::painter &)> &draw_content) {
+    const auto clip = target_.get_clip().intersect(to_rect(bounds));
+    if (!clip.w() || !clip.h())
+        return;
+    auto saved = target_.save_state();
+    target_.set_clip(clip);
+    auto appearance = native::theme::create(target_);
+    native::theme::state state;
+    state.selected = true;
+    appearance->draw_selection(to_rect(bounds), native::selection_shape::row,
+                               state);
+    native_painter selected(target_, dpi_, source_, images_);
+    selected.selection_ink_ = appearance->get_selection_foreground_color();
+    draw_content(selected);
 }
 
 } // namespace ui

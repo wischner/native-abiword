@@ -26,8 +26,94 @@ per-backend status.
   by the canvas skip the toolkit's accelerators. `dispatch_x_keyboard` honors them.
 - GEM's press path never focused a canvas, so nothing could be typed into one.
 
+## GEM typing and repaint cost
+
+Writer avoids calling unchanged toolbar, combo-box and ruler setters: those
+Native setters request repaints even when their values have not changed. GEM
+unions the requests into one dirty rectangle, so updating these controls on
+every character repainted much of the window through gemd. Unchanged canvas
+content bounds also invalidated the full canvas, including its rulers.
+
+On 2026-11-06, the Release GEM/gemd desktop test measured approximately 97 ms
+per character including event-loop painting before these application changes,
+and 37 ms after them. Editing without painting took about 0.12 ms per character.
+The painted benchmark uses 30 sequential edits and 5 ms polling, without a
+Rasta viewer; these are local diagnostic measurements, not end-to-end keyboard
+latency guarantees. Ordinary edits still rasterize and upload the viewport;
+caret blinking now invalidates only the visible caret rectangle. No Native
+source changes were needed for this fix.
+
+The F5 `GEM, Rasta` profile uses Debug, whose generated flags include `-g`,
+AddressSanitizer and UndefinedBehaviorSanitizer, with no optimization flag.
+The updated Debug test measured about 146 ms per painted key and 2.7 ms for
+editing alone. Debug rasterization and instrumentation remain a substantial
+cost; the Release comparison above must not be read as F5 performance.
+
 ## Square icon tools
 
 `toolbar` tools with an icon and no text are square, as long as the strip
 is thick, in the shared `item_bounds` layout. `get_item_bounds(id)` exposes
 a tool's rectangle.
+
+## Resource integration
+
+Fyodor now consumes Native's existing `resources` and `rc` implementation.
+All 17 toolbar commands have color and monochrome representations in an
+embedded pack. The latter are binary black/transparent masks, so Native's
+existing toolbar painter tints them with the theme foreground, including
+white selected ink in GEM/X11. Menus and toolbar backgrounds already use
+Native themes; no application palette override or Native modification was
+needed. See [resource sources](../../src/resources/README.md).
+
+## Document selection
+
+The document view's fixed pale-blue highlight has been removed. Fyodor's
+graphics adapter now uses Native's existing `theme::draw_selection` and
+selection foreground getter. Text, underlines and other decorations are
+redrawn through a selection clip; document background colors cannot obscure
+the selection. This is an application adapter change with no Native API or
+backend modifications. Pixel tests pass on SDL2, X11 and GEM/gemd.
+
+## GEM toolbar combo input
+
+Native's GEM event loop previously offered pointer input to canvas capture
+before checking an open combo popup. A dropdown painted above the document
+therefore lost its row clicks to the canvas. The GEM backend now routes both
+press and release to an open popup first, commits selection on release, and
+consumes outside dismissal without clicking through. Selection callbacks are
+protected against control/window destruction. No application workaround or
+public Native API change is involved.
+
+Native's `native_gemix_input_tests` now drives real Rasta/AES clicks through
+font and size combos hosted in a toolbar over a document canvas. It reproduced
+the failure before the fix and passes on both direct GEM and gemd, as do both
+transports' existing runtime tests. Fyodor's desktop suite separately verifies
+style, font, size, color and zoom changes reach the document/view.
+
+## Status placement and disabled icons
+
+Native adds `status_bar(owner, content_canvas, height)` to express a document
+footer without application backend branches. GEM selects the canvas host;
+its status strip stays inside the scrollbar edges. Other backends retain the
+outer window footer. Fyodor sizes the strip from Native's active theme. The
+original owner-only status-bar constructor keeps its existing behavior.
+The GEM height now follows the sample applications Gemscape and Ted's
+`gemctl_chrome_layout`: `max(12, char_h + 4, box_h - 2)`. This produces a
+20-pixel status band in the pinned SDK, rather than the previous 22-pixel
+AES-title metric.
+
+Native also adds `app_wnd::set_scroll_content(canvas *)` to associate the
+document before window creation. Fyodor uses this once, on every platform,
+with no toolkit checks. GEM creates actual AES frame scrollbars and forwards
+native arrow/page/slider messages to the canvas; slider ranges follow content,
+viewport and programmatic scrolling. The canvas reserves no duplicate tracks,
+so the status band meets the AES work boundary without the old bottom gap.
+Other backends retain their existing canvas implementations through the
+default adapter. Nested GEM canvases continue to scroll within their own host.
+
+Toolbar icon state painting now delegates to `theme::draw_toolbar_icon`. The
+common path preserves its previous mask tinting and color artwork. GEM draws
+disabled monochrome masks with binary stippling, like disabled stock text,
+because gray image ink was thresholding to white and hiding undo/redo. The
+monochrome undo/redo artwork has thicker strokes to retain its shape in this
+state; enabled commands retain solid ink.

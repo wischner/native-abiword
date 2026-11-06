@@ -10,6 +10,7 @@ NATIVE_ROOT ?= $(if $(wildcard $(ROOT)/../native/include/native.h),$(abspath $(R
 VERSION ?= 0.1.0
 NATIVE_BUILD := $(BUILD)/native-$(MODE)
 NATIVE_ARCHIVE := $(NATIVE_BUILD)/native/lib/native/libnative.a
+NATIVE_RC := $(NATIVE_BUILD)/native-rc/rc
 NATIVE_LDLIBS := -L$(BUILD)/sdk/usr/lib/x86_64-linux-gnu -lSDL2 -l:libSDL2_ttf-2.0.so.0 -lfontconfig -lSM -lICE -lX11 -lXext -lpng -lz -ljpeg -pthread -ldl
 OBJROOT := $(BUILD)/$(MODE)
 LIB_NAMES := impexp edit fmt gfx doc util
@@ -36,6 +37,7 @@ HEADLESS_TARGET := $(BIN)/fyodor-headless$(SUFFIX)
 export ROOT BUILD BIN MODE CXX CC AR OBJROOT CXXFLAGS LDFLAGS
 export LINK_LIBS TARGET HEADLESS_TARGET
 export NATIVE_ROOT NATIVE_ARCHIVE NATIVE_LDLIBS SUFFIX NATIVE_CHECKS
+export NATIVE_RC
 
 .PHONY: all release debug libs app native headless test docker-test run-tests run clean ui-test platform-test list-platforms $(LIB_NAMES)
 all: app
@@ -49,6 +51,10 @@ native:
 	    "$(NATIVE_ROOT)" "$(NATIVE_BUILD)" "$(NATIVE_CONFIG)"
 app: libs native
 	+flock "$(OBJROOT)/src.lock" $(MAKE) --no-print-directory -C src
+resources: native
+	@mkdir -p "$(OBJROOT)"
+	+flock "$(OBJROOT)/src.lock" $(MAKE) --no-print-directory -C src resources
+.PHONY: resources
 headless: libs
 	+flock "$(OBJROOT)/src.lock" $(MAKE) --no-print-directory -C src headless
 release:

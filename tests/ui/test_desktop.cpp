@@ -24,6 +24,8 @@
 #include "check.h"
 #include "impexp/file_format.h"
 #include "main_window.h"
+#include "test_resources.h"
+#include "test_selection.h"
 
 namespace fs = std::filesystem;
 using native::key_code;
@@ -45,7 +47,22 @@ public:
 
     // Run everything that needs no fresh paint.
     void run_edits() {
+        canvas_.stop_caret();
         CHECK(canvas_.get_created());
+        test_resources();
+        test_selection();
+        CHECK(window_.status_.get_extent() ==
+              native::theme::create(window_.get_gpx())->get_status_bar_height());
+        if (native::resources::current_context().toolkit == "gemix") {
+            CHECK(window_.status_.get_owner() == &canvas_);
+            CHECK(canvas_.get_client_bounds().y2() ==
+                  window_.status_.get_bounds().y1());
+            CHECK(canvas_.get_window_scrollbars());
+            CHECK(window_.status_.get_bounds().x2() == canvas_.get_dimensions().w);
+            CHECK(window_.status_.get_bounds().y2() == canvas_.get_dimensions().h);
+        } else {
+            CHECK(window_.status_.get_owner() == &window_);
+        }
         save_new_document();
         test_typing();
         test_formatting_keys();
@@ -94,7 +111,7 @@ public:
         const auto start = std::chrono::steady_clock::now();
         constexpr int keys = 300;
         for (int index = 0; index < keys; ++index)
-            canvas_.on_native_text_input("x");
+            type("x");
         const std::chrono::duration<double, std::milli> elapsed =
             std::chrono::steady_clock::now() - start;
         std::cout << "typing: " << elapsed.count() / keys
@@ -102,9 +119,23 @@ public:
         window_.run("undo");
     }
 
+    // Deliver one edit, allowing the event loop to paint before the next.
+    void type_painted_key() {
+        type("x");
+    }
+
 private:
     void type(const std::string &utf8) {
+        // A fresh, unhandled physical key precedes committed text. Native
+        // suppresses text belonging to the last handled shortcut (Enter,
+        // Ctrl+V, etc.); release alone intentionally does not reset it.
+        native::key_event event;
+        event.key = key_code::a;
+        event.action = native::key_action::press;
+        canvas_.on_native_key(event);
         canvas_.on_native_text_input(utf8);
+        event.action = native::key_action::release;
+        canvas_.on_native_key(event);
     }
 
     void press(key_code key, key_modifiers modifiers = key_modifiers::none) {
@@ -228,6 +259,34 @@ private:
         CHECK(window_.size_box_.get_text() == "17");
         CHECK(file_has("style=\"Heading 1\""));
         CHECK(window_.font_box_.get_text() == "Arial");
+
+        auto &view = canvas_.view();
+        const doc::name_values original{
+            {"font-family", view.char_property("font-family")},
+            {"font-size", view.char_property("font-size")},
+            {"color", view.char_property("color")}};
+        const auto &families = window_.font_box_.get_items();
+        CHECK(!families.empty());
+        if (!families.empty()) {
+            window_.font_box_.on_native_selection(0);
+            CHECK(view.char_property("font-family") == families.front());
+        }
+        const auto &sizes = window_.size_box_.get_items();
+        const auto size = std::ranges::find(sizes, "24");
+        CHECK(size != sizes.end());
+        if (size != sizes.end()) {
+            window_.size_box_.on_native_selection(
+                static_cast<int>(size - sizes.begin()));
+            CHECK(view.char_property("font-size") == "24pt");
+        }
+        window_.color_box_.on_native_selection(2);
+        CHECK(view.char_property("color") == "c0392b");
+        const auto zoom = view.zoom();
+        window_.zoom_box_.on_native_selection(0);
+        CHECK(view.zoom() == 0.5);
+        window_.set_zoom(zoom);
+        view.set_char_format(original);
+        canvas_.refresh();
     }
 
     void test_mouse() {
@@ -346,7 +405,7 @@ constexpr auto paint_timeout = std::chrono::seconds(10);
 
 // Time between paint checks. Checks come from a timer, because work
 // that keeps reposting itself can starve a backend's own event queue.
-constexpr auto paint_poll = std::chrono::milliseconds(50);
+constexpr auto paint_poll = std::chrono::milliseconds(5);
 
 // Finish once the canvas has painted past a count, or at the deadline.
 class paint_waiter {
@@ -381,11 +440,31 @@ private:
         if (finished_ || (paints_ == seen_ &&
                           std::chrono::steady_clock::now() < deadline_))
             return;
-        finished_ = true;
         CHECK(paints_ != seen_);
-        test_.check_paint();
-        test_.measure_typing();
-        window_.destroy();
+        if (paints_ == seen_) {
+            finished_ = true;
+            window_.destroy();
+            return;
+        }
+        if (!measuring_) {
+            test_.check_paint();
+            test_.measure_typing();
+            measuring_ = true;
+            started_ = std::chrono::steady_clock::now();
+        } else if (++painted_keys_ == 30) {
+            const std::chrono::duration<double, std::milli> elapsed =
+                std::chrono::steady_clock::now() - started_;
+            std::cout << "typing: " << elapsed.count() / painted_keys_
+                      << " ms per key, including event-loop paint"
+                         " (5 ms polling)\n";
+            test_.check_paint();
+            finished_ = true;
+            window_.destroy();
+            return;
+        }
+        seen_ = paints_;
+        deadline_ = std::chrono::steady_clock::now() + paint_timeout;
+        test_.type_painted_key();
     }
 
     desktop_test &test_;
@@ -393,6 +472,9 @@ private:
     const int &paints_;
     int seen_ = 0;
     bool finished_ = false;
+    bool measuring_ = false;
+    int painted_keys_ = 0;
+    std::chrono::steady_clock::time_point started_;
     std::chrono::steady_clock::time_point deadline_;
     std::jthread timer_;
 };

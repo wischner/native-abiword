@@ -54,6 +54,12 @@ public:
     }
     void draw_image(std::string_view, const gfx::device_rect &) override {
     }
+    void draw_selection(
+        const gfx::device_rect &,
+        const std::function<void(gfx::painter &)> &draw_content) override {
+        ++fills;
+        draw_content(*this);
+    }
 };
 
 void test_typing_and_paragraphs() {

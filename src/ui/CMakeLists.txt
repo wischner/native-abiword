@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.20)
 project(fyodor_native_dependency LANGUAGES CXX)
 # Native permits consumers to choose their own root build directory.
 add_subdirectory("${NATIVE_ROOT}" native)
+if(NOT TARGET native_rc)
+    add_subdirectory("${NATIVE_ROOT}/tools/rc" native-rc)
+endif()
+
+# Artwork regeneration is explicit; ordinary builds use the checked-in PNGs.
+add_executable(export_icons EXCLUDE_FROM_ALL ../resources/export_icons.cpp)
+target_link_libraries(export_icons PRIVATE native)
 
 # Native's public headers are external to fyodor. Treat them as system
 # headers in both the dependency and its consumers.

@@ -15,6 +15,7 @@
 #ifndef GFX_GRAPHICS_H
 #define GFX_GRAPHICS_H
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -115,6 +116,13 @@ public:
     // Draw embedded image data scaled into a rectangle.
     virtual void draw_image(std::string_view data_name,
                             const device_rect &bounds) = 0;
+
+    // Paint a platform selection, then synchronously redraw content through
+    // a painter clipped to bounds, using selection ink and suppressing
+    // document background fills. Restore graphics state on return or throw.
+    virtual void draw_selection(
+        const device_rect &bounds,
+        const std::function<void(painter &)> &draw_content) = 0;
 };
 
 // Lays text out with a synthetic fixed-pitch font, without a display.

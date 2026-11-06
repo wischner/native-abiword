@@ -122,6 +122,44 @@ double inches(util::lu value) {
     return static_cast<double>(value) / util::layout_resolution;
 }
 
+// These Native setters repaint even when the value is unchanged. Keep
+// ordinary typing from repainting the surrounding controls and rulers.
+void update_checked(native::toolbar &bar, const std::string &id, bool value) {
+    if (bar.get_checked(id) != value)
+        bar.set_checked(id, value);
+}
+
+void update_enabled(native::toolbar &bar, const std::string &id, bool value) {
+    const auto &items = bar.get_items();
+    const auto item = std::ranges::find(items, id, &native::tool_item::id);
+    if (item != items.end() && item->enabled != value)
+        bar.set_enabled(id, value);
+}
+
+// Synchronize ruler state without invalidating unchanged decorations.
+void update_ruler(native::ruler &ruler,
+                  std::optional<std::pair<double, double>> &range,
+                  double scale, double origin, double first, double last,
+                  std::vector<native::ruler_marker> markers) {
+    if (ruler.get_units_per_pixel() != scale)
+        ruler.set_units_per_pixel(scale);
+    if (ruler.get_origin() != origin)
+        ruler.set_origin(origin);
+    const auto next_range = std::make_pair(first, last);
+    if (range != next_range) {
+        ruler.set_active_range(first, last);
+        range = next_range;
+    }
+    if (!std::ranges::equal(ruler.get_markers(), markers,
+                           [](const auto &left, const auto &right) {
+                               return left.id == right.id &&
+                                      left.value == right.value &&
+                                      left.shape == right.shape &&
+                                      left.movable == right.movable;
+                           }))
+        ruler.set_markers(std::move(markers));
+}
+
 // Return the items of the zoom box.
 std::vector<std::string> zoom_labels() {
     std::vector<std::string> result;
@@ -147,12 +185,14 @@ main_window::main_window(const app::options &settings)
       format_bar_(*this, native::window_edge::top, bar_extent),
       top_ruler_(canvas_, native::window_edge::top, ruler_extent),
       left_ruler_(canvas_, native::window_edge::left, ruler_extent),
-      status_(*this, 24), open_dialog_(*this, "Open"),
+      status_(*this, canvas_), open_dialog_(*this, "Open"),
       save_dialog_(*this, "Save As"),
       image_dialog_(*this, "Insert Image"),
       find_(*this, canvas_, [this](const std::string &text) {
           set_message(text);
       }) {
+    canvas_.set_parent(this);
+    set_scroll_content(&canvas_);
     build_menu();
     build_toolbar();
     build_format_bar();
@@ -190,7 +230,8 @@ main_window::main_window(const app::options &settings)
         });
 
     on_wnd_create.connect([this] {
-        canvas_.set_parent(this);
+        status_.set_extent(
+            native::theme::create(get_gpx())->get_status_bar_height());
         canvas_.create();
         canvas_.show();
         place_children();
@@ -383,13 +424,6 @@ void main_window::update_rulers() {
     const int page_y = view.caret_rect().y - scroll.y -
         util::lu_to_device(view.layout().locate(view.point()).y, dpi);
 
-    top_ruler_.set_units_per_pixel(1.0 / dpi)
-        .set_origin(-(view.page_left() - scroll.x) / dpi)
-        .set_active_range(text_left, text_right);
-    left_ruler_.set_units_per_pixel(1.0 / dpi)
-        .set_origin(-page_y / dpi)
-        .set_active_range(text_top, text_bottom);
-
     using shape = native::ruler_marker_shape;
     const double indent_left =
         text_left + util::to_inches(view.block_property("margin-left"));
@@ -408,10 +442,13 @@ void main_window::update_rulers() {
          fmt::parse_tab_stops(view.block_property("tabstops")))
         markers.push_back({tab_id++, text_left + inches(stop.position),
                            shape::tab, true});
-    top_ruler_.set_markers(std::move(markers));
-    left_ruler_.set_markers({{marker_page_top, text_top, shape::block, true},
-                             {marker_page_bottom, text_bottom, shape::block,
-                              true}});
+    update_ruler(top_ruler_, top_ruler_range_, 1.0 / dpi,
+                 -(view.page_left() - scroll.x) / dpi, text_left, text_right,
+                 std::move(markers));
+    update_ruler(left_ruler_, left_ruler_range_, 1.0 / dpi, -page_y / dpi,
+                 text_top, text_bottom,
+                 {{marker_page_top, text_top, shape::block, true},
+                  {marker_page_bottom, text_bottom, shape::block, true}});
 }
 
 void main_window::set_message(const std::string &text) {
@@ -432,23 +469,23 @@ void main_window::update_state() {
     updating_ = true;
     edit::view &view = canvas_.view();
 
-    format_bar_.set_checked("toggleBold",
-                         view.char_property("font-weight") == "bold");
-    format_bar_.set_checked("toggleItalic",
-                         view.char_property("font-style") == "italic");
+    update_checked(format_bar_, "toggleBold",
+                   view.char_property("font-weight") == "bold");
+    update_checked(format_bar_, "toggleItalic",
+                   view.char_property("font-style") == "italic");
     const std::string decoration = view.char_property("text-decoration");
-    format_bar_.set_checked("toggleUline",
-                         decoration.find("underline") != std::string::npos);
-    format_bar_.set_checked(
-        "toggleStrike", decoration.find("line-through") != std::string::npos);
+    update_checked(format_bar_, "toggleUline",
+                   decoration.find("underline") != std::string::npos);
+    update_checked(format_bar_, "toggleStrike",
+                   decoration.find("line-through") != std::string::npos);
     const std::string align = view.block_property("text-align");
-    format_bar_.set_checked("alignLeft", align == "left");
-    format_bar_.set_checked("alignCenter", align == "center");
-    format_bar_.set_checked("alignRight", align == "right");
-    format_bar_.set_checked("alignJustify", align == "justify");
+    update_checked(format_bar_, "alignLeft", align == "left");
+    update_checked(format_bar_, "alignCenter", align == "center");
+    update_checked(format_bar_, "alignRight", align == "right");
+    update_checked(format_bar_, "alignJustify", align == "justify");
     auto &history = view.document().table().history();
-    toolbar_.set_enabled("undo", history.can_undo());
-    toolbar_.set_enabled("redo", history.can_redo());
+    update_enabled(toolbar_, "undo", history.can_undo());
+    update_enabled(toolbar_, "redo", history.can_redo());
 
     // A document may hold a value the box does not offer, such as a
     // missing font or a 17pt heading: list it, so the box shows what the
@@ -457,8 +494,10 @@ void main_window::update_state() {
         if (std::ranges::find(box.get_items(), text) == box.get_items().end())
             box.add_item(text);
         const auto &items = box.get_items();
-        box.set_selected_index(static_cast<int>(
-            std::ranges::find(items, text) - items.begin()));
+        const auto index = static_cast<int>(
+            std::ranges::find(items, text) - items.begin());
+        if (box.get_selected_index() != index)
+            box.set_selected_index(index);
     };
     select(style_box_, view.block_style());
     select(font_box_, view.char_property("font-family"));

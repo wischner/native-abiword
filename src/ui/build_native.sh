@@ -10,4 +10,4 @@ cmake -S "$ROOT/src/ui" -DNATIVE_ROOT="$native_root" -B "$native_build" \
     -DNATIVE_ENABLE_DEVELOPER_CHECKS="${NATIVE_CHECKS:-ON}" \
     -DCMAKE_PREFIX_PATH="$BUILD/sdk/usr" \
     -DCMAKE_CXX_FLAGS="-I$BUILD/sdk/usr/include/x86_64-linux-gnu"
-make --no-print-directory -C "$native_build" native
+make --no-print-directory -C "$native_build" native native_rc

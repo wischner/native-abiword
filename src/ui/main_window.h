@@ -14,7 +14,9 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <native.h>
@@ -95,6 +97,9 @@ private:
     std::vector<std::string> menu_commands_;
 
     std::string message_;
+    // Native exposes ruler markers and geometry, but no range getter.
+    std::optional<std::pair<double, double>> top_ruler_range_;
+    std::optional<std::pair<double, double>> left_ruler_range_;
     bool updating_ = false;
 };
 

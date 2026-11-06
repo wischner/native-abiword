@@ -12,17 +12,18 @@ BINARIES := $(patsubst $(SRCDIR)/test_%.cpp,$(OBJDIR)/test_%,$(SOURCES))
 DEPS     := $(BINARIES:=.d)
 
 UI_TEST  := $(OBJDIR)/test_desktop
+UI_SOURCES := $(wildcard $(ROOT)/tests/ui/test_*.cpp)
 UI_OBJ   := $(wildcard $(OBJROOT)/src/ui/*.o) $(filter-out %/main.o %/main_headless.o,$(wildcard $(OBJROOT)/src/app/*.o))
 
 .PHONY: all run clean ui
 all: $(BINARIES)
 
 # Links the real window; the display it needs comes from native alone.
-$(UI_TEST): $(ROOT)/tests/ui/test_desktop.cpp $(LINK_LIBS) $(NATIVE_ARCHIVE)
+$(UI_TEST): $(UI_SOURCES) $(wildcard $(ROOT)/tests/ui/*.h) $(UI_OBJ) $(LINK_LIBS) $(NATIVE_ARCHIVE)
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -isystem $(NATIVE_ROOT)/include -I$(ROOT)/src/ui \
 	    -I$(ROOT)/tests/unit -DFIXTURES='"$(ROOT)/tests/fixtures"' -MMD -MP \
-	    $< $(UI_OBJ) $(LINK_LIBS) $(NATIVE_ARCHIVE) $(LDFLAGS) \
+	    $(UI_SOURCES) $(UI_OBJ) $(LINK_LIBS) $(NATIVE_ARCHIVE) $(LDFLAGS) \
 	    $(NATIVE_LDLIBS) -Wl,-rpath,'$$ORIGIN/../../sdk/usr/lib/x86_64-linux-gnu' \
 	    -o $@
 	@echo "  TEST    $(notdir $@)"

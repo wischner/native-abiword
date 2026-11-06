@@ -14,6 +14,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -118,11 +119,17 @@ public:
     void draw_image(std::string_view data_name,
                     const gfx::device_rect &bounds) override;
 
+    // Draw Native's active selection and clipped content in its foreground.
+    void draw_selection(
+        const gfx::device_rect &bounds,
+        const std::function<void(gfx::painter &)> &draw_content) override;
+
 private:
     native::gpx &target_;
     double dpi_;
     const doc::document &source_;
     image_cache &images_;
+    std::optional<native::rgba> selection_ink_;
 };
 
 } // namespace ui

@@ -22,10 +22,17 @@ def build_dir(name, mode):
     return ROOT / 'build/platforms' / name / mode
 
 
-def run_one(name, mode, build_only):
+def run_one(name, mode, build_only, resources_only=False):
     """Return 'passed', or the failing stage."""
     spec = PLATFORMS[name]
     build = build_dir(name, mode)
+    resource_args = []
+    if any('CMAKE_TOOLCHAIN_FILE' in part for part in spec['cmake']):
+        outcome = run_one('linux-sdl2', 'release', True, resources_only=True)
+        if outcome != 'passed':
+            return f'host resources: {outcome}'
+        resource_cpp = build_dir('linux-sdl2', 'release') / 'resources/fyodor.cpp'
+        resource_args = [f'-DFYODOR_RESOURCE_CPP={resource_cpp}']
     docker = ['docker', 'run', '--rm', '--init', '-u',
               f'{os.getuid()}:{os.getgid()}', '-e', 'HOME=/tmp',
               '-e', 'ASAN_OPTIONS=detect_leaks=0', '-v', f'{ROOT}:{ROOT}',
@@ -34,9 +41,11 @@ def run_one(name, mode, build_only):
         'configure': ['cmake', '-S', '.', '-B', str(build),
                       f'-DNATIVE_ROOT={NATIVE}',
                       f'-DCMAKE_BUILD_TYPE={BUILD_TYPES[mode]}',
+                      *resource_args,
                       *[part.format(native=NATIVE) for part in spec['cmake']]],
         'build': ['cmake', '--build', str(build), '-j8', '--target',
-                  'fyodor', 'test_desktop'],
+                  *(['fyodor_resources'] if resources_only else
+                    ['fyodor', 'test_desktop'])],
     }
     # Cross builds have no 'run': their test runs on the target machine.
     if not build_only and 'run' in spec:

@@ -140,11 +140,14 @@ void document_canvas::sync_viewport() {
         return;
     const native::rect client = get_client_bounds();
     view_->set_viewport_width(client.d.w);
-    set_content_bounds(
-        {0, 0, static_cast<std::uint32_t>(view_->content_width()),
-         static_cast<std::uint32_t>(view_->content_height())});
+    const auto content = get_content_bounds();
+    const auto width = static_cast<std::uint32_t>(view_->content_width());
+    const auto height = static_cast<std::uint32_t>(view_->content_height());
+    if (content.x != 0 || content.y != 0 || content.width != width ||
+        content.height != height)
+        set_content_bounds({0, 0, width, height});
     buffer_dirty_ = true;
-    invalidate();
+    invalidate(get_client_bounds());
 }
 
 void document_canvas::refresh() {
@@ -184,7 +187,17 @@ void document_canvas::show_caret_now() {
 
 void document_canvas::toggle_caret() {
     caret_on_ = !caret_on_;
-    invalidate();
+    if (view_->has_selection() || !get_focused())
+        return;
+    const auto caret = view_->caret_rect();
+    const auto client = get_client_bounds();
+    const auto scroll = get_scroll_position();
+    const native::rect bounds(caret.x - scroll.x + client.p.x,
+                              caret.y - scroll.y + client.p.y,
+                              1, caret.height + 1);
+    const auto visible = bounds.intersect(client);
+    if (visible.w() && visible.h())
+        invalidate(visible);
 }
 
 void document_canvas::start_caret(native::wnd &owner) {

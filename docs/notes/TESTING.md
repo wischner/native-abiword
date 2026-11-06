@@ -17,9 +17,33 @@ results in the saved `.abw`, the view, and the pixels of the painted back buffer
 It reaches private members through `friend class ::desktop_test`, which keeps
 test accessors out of the public interface.
 
-It names no toolkit. A backend contributes only a display: SDL's dummy driver,
+Committed test text is preceded by a fresh unhandled physical key and followed
+by release. This matches Native's shortcut-text suppression contract: release
+of a handled key does not clear the suppression for that key's text event.
+
+`test_resources.cpp` also checks all 17 embedded icon pairs, explicit GEM/X11
+selection, fallback, decoded dimensions, binary alpha/ink, active toolbar
+lookup and Native theme feedback. On monochrome backends it checks the
+selected background is black and the selected foreground is white. These
+checks run within the desktop test after window creation.
+
+`test_selection.cpp` paints actual document text through `native_painter`.
+At 75%, 100% and 150% zoom with scrolling, it selects part of a word across
+colored text with a background and decorations. It checks Native selection
+background/foreground pixels, unchanged pixels outside the selection, intact
+stored formatting, and restoration of graphics state when a callback throws.
+On GEM/X11 it additionally requires black selection background and white ink.
+
+The editing scenario names no toolkit. A backend contributes only a display: SDL's dummy driver,
 Xvfb from that backend's Docker image, or a private `gemd` server for GEM, as
 Native's own tests do.
+
+Typing timings include both a 300-key edit-only loop and 30 edits that each
+wait for an event-loop paint. The latter includes backend scheduling and a
+5 ms polling timer; it is not an OS-keyboard or Rasta-viewer latency test.
+The caret timer is stopped during the scenario so blinking cannot satisfy a
+paint wait. Paint timeouts fail the test, and the final back buffer is checked
+again after the painted edits. Timings are diagnostic, not pass/fail limits.
 
 **What it does not cover.** Those entry points sit just above each backend, so
 the backend's own step from OS event to `on_native_*` is outside this test. That
@@ -36,3 +60,25 @@ Logs land in `build/platforms/<name>/<mode>/`.
 
 F5 profiles are named `<name>, <env>`, such as `GEM, Rasta`. Each builds through
 the same script and debugs through `scripts/debug/linux.py`.
+
+The GEM toolbar-popup regression is in Native's existing
+`tests/native_gemix_control_checks.cpp`, executed by
+`native_gemix_input_tests`. It uses real Rasta packets, checks font/size row
+selection over a canvas, dropdown/change notifications, outside dismissal,
+and resumed document input without a leaked click. Both direct GEM and gemd
+pass. Fyodor's `test_format_bar` checks the application callbacks for style,
+font, size, color and zoom; it does not substitute for that backend test.
+
+Status placement is checked both in Fyodor and Native. The application's
+status extent must equal the active theme height, and the selected host must
+match the platform convention. Native's `native_ruler_toolbar_tests` covers
+resizing and both scrollbar visibility policies. GEM resource tests render
+undo/redo through the real theme in enabled and disabled states and require
+visible, reduced disabled ink. A live GEM framebuffer was also inspected with
+both scrollbars visible.
+The GEM runtime test checks the 20-pixel Gemscape/Ted band height for the
+pinned SDK. Fyodor checks that GEM uses frame scrollbars and that the status
+strip ends exactly at the canvas's bottom and right edges. Native's real
+Rasta input test checks AES frame flags/dimensions, arrow and page clicks,
+both thumb drags, content shrink, resize and destruction. This verifies the
+controls themselves, including their mouse routing, not just drawn replicas.
