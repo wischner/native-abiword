@@ -50,6 +50,8 @@ def run_one(name, mode, build_only, resources_only=False):
             return f'host resources: {outcome}'
         resource_cpp = build_dir('linux-sdl2', 'release') / 'resources/fyodor.cpp'
         resource_args = [f'-DFYODOR_RESOURCE_CPP={resource_cpp}']
+    if os.environ.get('FYODOR_VERSION'):
+        resource_args.append(f'-DFYODOR_VERSION={os.environ["FYODOR_VERSION"]}')
     docker = ['docker', 'run', '--rm', '--init', '-u',
               f'{os.getuid()}:{os.getgid()}', '-e', 'HOME=/tmp',
               '-e', 'ASAN_OPTIONS=detect_leaks=0', '-v', f'{ROOT}:{ROOT}',

@@ -8,7 +8,19 @@
             "env",
             "SDL_VIDEODRIVER=dummy",
             "SDL_RENDER_DRIVER=software"
-        ]
+        ],
+        "package": {
+            "title": "Linux (SDL2)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 or Wayland desktop."
+            ],
+            "run": [
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "linux-x11": {
         "image": "wischner/gcc-x86_64-linux-x11:latest",
@@ -19,7 +31,19 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "x11"
+        "session": "x11",
+        "package": {
+            "title": "Linux (X11, Athena widgets)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland)."
+            ],
+            "run": [
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "linux-motif": {
         "image": "wischner/gcc-x86_64-linux-motif:latest",
@@ -30,7 +54,19 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "cde-xephyr"
+        "session": "cde-xephyr",
+        "package": {
+            "title": "Linux (Motif)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland)."
+            ],
+            "run": [
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "linux-openlook": {
         "image": "wischner/gcc-x86_64-linux-openlook:latest",
@@ -41,7 +77,20 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "openlook-xephyr"
+        "session": "openlook-xephyr",
+        "package": {
+            "title": "Linux (OPEN LOOK, XView)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland).",
+                "The XView libraries are included in `lib/`."
+            ],
+            "run": [
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "linux-wmaker": {
         "image": "wischner/gcc-x86_64-linux-window-maker:latest",
@@ -52,7 +101,20 @@
             "xvfb-run",
             "-a"
         ],
-        "session": "window-maker-xephyr"
+        "session": "window-maker-xephyr",
+        "package": {
+            "title": "Linux (Window Maker, WINGs)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "An X11 session (Xorg or XWayland).",
+                "The WINGs libraries are included in `lib/`."
+            ],
+            "run": [
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "linux-gemix-gemd": {
         "image": "wischner/gcc-x86_64-gemix:latest",
@@ -69,27 +131,79 @@
             "{native}/scripts/gemix/gemd-session.sh"
         ],
         "session": "gemix",
-        "gemd": true
+        "gemd": true,
+        "package": {
+            "title": "Linux (GEMix)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.35 or newer.",
+                "A running GEMix `gemd` server. Writer is a GEM client and connects to the server named by `GEMD_SOCKET`; it does not start one."
+            ],
+            "run": [
+                "Start Writer from a GEMix session, or point it at the server:",
+                "",
+                "```sh",
+                "GEMD_SOCKET=/path/to/gemd.sock ./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "haiku": {
         "image": "wischner/gcc-x86_64-haiku:1.1.0",
         "cmake": [
             "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-haiku.cmake"
-        ]
+        ],
+        "package": {
+            "title": "Haiku",
+            "requires": [
+                "64-bit (x86_64) Haiku.",
+                "No extra packages: Writer uses only system libraries."
+            ],
+            "run": [
+                "Unzip, then double-click `fyodor` in Tracker, or from Terminal:",
+                "",
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "linux-wayland": {
         "image": "native-wayland-sdk:24.04",
         "cmake": [
             "-DTOOLKIT=WAYLAND"
         ],
-        "dockerfile": "{native}/scripts/linux/wayland"
+        "dockerfile": "{native}/scripts/linux/wayland",
+        "package": {
+            "title": "Linux (GTK 4)",
+            "requires": [
+                "64-bit x86 Linux with glibc 2.39 or newer (Ubuntu 24.04 or later).",
+                "A Wayland or X11 desktop."
+            ],
+            "run": [
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "linux-elementary": {
         "image": "native-wayland-sdk:24.04",
         "cmake": [
             "-DTOOLKIT=ELEMENTARY"
         ],
-        "dockerfile": "{native}/scripts/linux/wayland"
+        "dockerfile": "{native}/scripts/linux/wayland",
+        "package": {
+            "title": "elementary OS",
+            "requires": [
+                "elementary OS 8, or 64-bit x86 Linux with glibc 2.39 or newer and Granite 7.",
+                "A Wayland or X11 desktop."
+            ],
+            "run": [
+                "```sh",
+                "./fyodor document.abw",
+                "```"
+            ]
+        }
     },
     "windows": {
         "image": "native-windows-winui-sdk:24.04",
@@ -97,6 +211,16 @@
             "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-mingw.cmake"
         ],
         "suffix": ".exe",
-        "dockerfile": "{native}/scripts/windows/winui"
+        "dockerfile": "{native}/scripts/windows/winui",
+        "package": {
+            "title": "Windows",
+            "requires": [
+                "64-bit Windows 10 or 11.",
+                "[Windows App Runtime 1.8 (x64)](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads). Install it once; Writer will not start without it."
+            ],
+            "run": [
+                "Unzip the folder and run `fyodor.exe`. Keep the DLLs beside it."
+            ]
+        }
     }
 }

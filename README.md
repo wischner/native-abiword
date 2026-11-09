@@ -52,6 +52,11 @@ make list-platforms
 See [testing](docs/notes/TESTING.md). ASan cannot start on hosts that preload a
 security agent; see [that note](docs/notes/HOST-ASAN.md).
 
+## Releases
+
+Pushing a `vX.Y.Z` tag builds every backend and publishes one zip per
+platform on the GitHub release page. See [releasing](docs/notes/RELEASING.md).
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md): layers and design decisions
