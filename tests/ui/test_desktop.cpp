@@ -183,7 +183,7 @@ private:
 
     void save_new_document() {
         CHECK(window_.save_to(path_));
-        CHECK(window_.get_title() == path_.filename().string() + " - Writer");
+        CHECK(window_.get_title() == path_.filename().string() + " - Fyodor");
     }
 
     void test_typing() {

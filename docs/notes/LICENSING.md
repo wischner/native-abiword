@@ -1,6 +1,6 @@
 # Licensing
 
-Writer is licensed under the GNU General Public License, version 2 or (at your
+Fyodor is licensed under the GNU General Public License, version 2 or (at your
 option) any later version, the same terms as AbiWord. `LICENSE` is the GPL v2
 text, copied from AbiWord's `COPYING`.
 
@@ -15,5 +15,5 @@ The GPL's notice requirement needs that, so keep those lines when moving code.
 Files written from scratch carry only the project line.
 
 Native is MIT, which is compatible, and is linked statically. "AbiWord" is
-AbiSource's name, so the product is called Writer and only the file format keeps
+AbiSource's name, so the product is called Fyodor and only the file format keeps
 the AbiWord name.

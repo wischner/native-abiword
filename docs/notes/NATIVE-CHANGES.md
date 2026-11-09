@@ -29,7 +29,7 @@ per-backend status.
 
 ## GEM typing and repaint cost
 
-Writer avoids calling unchanged toolbar, combo-box and ruler setters: those
+Fyodor avoids calling unchanged toolbar, combo-box and ruler setters: those
 Native setters request repaints even when their values have not changed. GEM
 unions the requests into one dirty rectangle, so updating these controls on
 every character repainted much of the window through gemd. Unchanged canvas

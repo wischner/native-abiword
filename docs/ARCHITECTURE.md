@@ -1,6 +1,6 @@
-# Writer architecture
+# Fyodor architecture
 
-Writer (codename **fyodor**) is AbiWord rebuilt from the ground up on the
+Fyodor is AbiWord rebuilt from the ground up on the
 Native UI library. It reads and writes AbiWord's `.abw` format and keeps the
 ideas that make AbiWord work. It replaces the C-with-classes code, GObject and
 the per-platform front ends with modern C++20 and one UI layer.

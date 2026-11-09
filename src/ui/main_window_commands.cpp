@@ -82,7 +82,7 @@ const std::vector<menu_group> &menu_groups() {
           {"", ""},
           {"&Increase Indent", "marginIncrease"},
           {"&Decrease Indent", "marginDecrease"}}},
-        {"&Help", {{"&About Writer", "about"}}},
+        {"&Help", {{"&About Fyodor", "about"}}},
     };
     return groups;
 }
@@ -159,7 +159,7 @@ bool main_window::confirm_discard() {
     if (!canvas_.document().table().history().is_dirty())
         return true;
     switch (native::message_box::show(
-        *this, "Save changes to this document?", "Writer",
+        *this, "Save changes to this document?", "Fyodor",
         native::message_box_buttons::yes_no_cancel,
         native::message_box_icon::question)) {
     case native::message_box_result::yes:
@@ -292,10 +292,10 @@ void main_window::show_find() {
 void main_window::show_about() {
     native::message_box::show(
         *this,
-        "Writer " FYODOR_VERSION " (fyodor)\n\n"
+        "Fyodor " FYODOR_VERSION "\n\n"
         "A word processor rebuilt from AbiWord on the Native UI library.\n"
         "Licensed under the GNU GPL, version 2 or later.",
-        "About Writer", native::message_box_buttons::ok,
+        "About Fyodor", native::message_box_buttons::ok,
         native::message_box_icon::information);
 }
 

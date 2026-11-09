@@ -7,6 +7,7 @@ usage: platforms.py [all|BACKEND] [--mode release|debug] [--build-only]
 from pathlib import Path
 import json
 import os
+import platform
 import subprocess
 import sys
 
@@ -26,7 +27,7 @@ def build_dir(name, mode):
 
 def ensure_image(spec):
     """Build an SDK image that is not on Docker Hub from Native's Dockerfile."""
-    if 'dockerfile' not in spec:
+    if 'dockerfile' not in spec or 'image' not in spec:
         return True
     image = spec['image']
     if subprocess.run(['docker', 'image', 'inspect', image],
@@ -40,6 +41,9 @@ def ensure_image(spec):
 def run_one(name, mode, build_only, resources_only=False):
     """Return 'passed', or the failing stage."""
     spec = PLATFORMS[name]
+    # Host backends (macOS) build with the machine's own toolchain.
+    if 'host' in spec and platform.system() != spec['host']:
+        return f'skipped (needs {spec["host"]})'
     if not ensure_image(spec):
         return 'image build failed'
     build = build_dir(name, mode)
@@ -52,17 +56,19 @@ def run_one(name, mode, build_only, resources_only=False):
         resource_args = [f'-DFYODOR_RESOURCE_CPP={resource_cpp}']
     if os.environ.get('FYODOR_VERSION'):
         resource_args.append(f'-DFYODOR_VERSION={os.environ["FYODOR_VERSION"]}')
-    docker = ['docker', 'run', '--rm', '--init', '-u',
-              f'{os.getuid()}:{os.getgid()}', '-e', 'HOME=/tmp',
-              '-e', 'ASAN_OPTIONS=detect_leaks=0', '-v', f'{ROOT}:{ROOT}',
-              '-v', f'{NATIVE}:{NATIVE}', '-w', str(ROOT), spec['image']]
+    docker = [] if 'host' in spec else [
+        'docker', 'run', '--rm', '--init', '-u',
+        f'{os.getuid()}:{os.getgid()}', '-e', 'HOME=/tmp',
+        '-e', 'ASAN_OPTIONS=detect_leaks=0', '-v', f'{ROOT}:{ROOT}',
+        '-v', f'{NATIVE}:{NATIVE}', '-w', str(ROOT), spec['image']]
     stages = {
         'configure': ['cmake', '-S', '.', '-B', str(build),
                       f'-DNATIVE_ROOT={NATIVE}',
                       f'-DCMAKE_BUILD_TYPE={BUILD_TYPES[mode]}',
                       *resource_args,
                       *[part.format(native=NATIVE) for part in spec['cmake']]],
-        'build': ['cmake', '--build', str(build), '-j8', '--target',
+        'build': ['cmake', '--build', str(build), f'-j{os.cpu_count() or 8}',
+                  '--target',
                   *(['fyodor_resources'] if resources_only else
                     ['fyodor', 'test_desktop'])],
     }
@@ -102,7 +108,7 @@ def main():
             log = build_dir(name, mode) / 'build.log'
             if log.exists():
                 print(log.read_text()[-4000:], flush=True)
-        failed |= outcome != 'passed'
+        failed |= outcome != 'passed' and not outcome.startswith('skipped')
     return 1 if failed else 0
 
 

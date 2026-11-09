@@ -122,10 +122,33 @@ def stage_windows(spec, executable, stage):
     return sorted(bundled), [], ''
 
 
+def stage_macos(spec, bundle, stage):
+    """Copy the .app, refuse non-system dylibs, and sign it ad hoc."""
+    app = stage / spec['bundle']
+    subprocess.run(['ditto', str(bundle), str(app)], check=True)
+    binary = app / 'Contents/MacOS/fyodor'
+    links = subprocess.run(['otool', '-L', str(binary)], check=True,
+                           capture_output=True, text=True).stdout.splitlines()
+    foreign = [line.split()[0] for line in links[1:]
+               if not line.split()[0].startswith(('/System/', '/usr/lib/'))]
+    if foreign:
+        sys.exit(f'macos: non-system libraries must be embedded: {foreign}')
+    archs = subprocess.run(['lipo', '-archs', str(binary)], check=True,
+                           capture_output=True, text=True).stdout.split()
+    print(f'macos: {spec["bundle"]} architectures: {" ".join(archs)}')
+    # Apple silicon refuses unsigned code; an ad hoc signature is the minimum.
+    # A Developer ID signature and notarization would replace it.
+    subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(app)],
+                   check=True)
+    subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)],
+                   check=True)
+    return [], [], ''
+
+
 def readme(name, spec, version, executable, bundled, packages, system):
     info = spec['package']
-    lines = [f'# Writer {version} for {info["title"]}', '',
-             'Writer (codename fyodor) is a word processor rebuilt from',
+    lines = [f'# Fyodor {version} for {info["title"]}', '',
+             'Fyodor is a word processor rebuilt from',
              '[AbiWord](https://github.com/fork-vault/abiword) on the',
              '[Native](https://github.com/wischner/native) UI library. It reads',
              "and writes AbiWord's `.abw` files. This is an early port: tables,",
@@ -138,12 +161,12 @@ def readme(name, spec, version, executable, bundled, packages, system):
                   '', '```sh', 'sudo apt install ' + ' '.join(packages), '```']
     lines += ['', '## Run', '', *info['run'], '']
     lines += ['## Contents', '', f'- `{executable}`: the application']
-    lines += [f'- `{item}`: shipped with Writer, not a system package'
+    lines += [f'- `{item}`: shipped with Fyodor, not a system package'
               for item in bundled]
     lines += ['- `LICENSE`, `THIRD-PARTY-NOTICES.md`: license terms']
     if name == 'windows':
         lines += ['- `licenses/`: Windows App SDK license terms']
-    lines += ['', 'Writer is free software under the GNU General Public License,',
+    lines += ['', 'Fyodor is free software under the GNU General Public License,',
               'version 2 or later. Source: https://github.com/wischner/native-abiword', '']
     return '\n'.join(lines)
 
@@ -166,21 +189,26 @@ def main():
     else:
         platforms.ensure_image(spec)
 
-    executable = (platforms.build_dir(name, 'release') / 'bin'
-                  / ('fyodor' + spec.get('suffix', '')))
+    binaries = platforms.build_dir(name, 'release') / 'bin'
+    executable = binaries / ('fyodor' + spec.get('suffix', ''))
     package = f'fyodor-{version}-{name}'
     stage = DIST / package
     if stage.exists():
         shutil.rmtree(stage)
     stage.mkdir(parents=True)
-    shutil.copy2(executable, stage / executable.name)
 
-    if name == 'windows':
-        bundled, packages, system = stage_windows(spec, executable, stage)
-    elif name == 'haiku':
-        bundled, packages, system = [], [], ''
+    if name == 'macos':
+        bundled, packages, system = stage_macos(
+            spec, binaries / 'fyodor.app', stage)
+        executable = Path(spec['bundle'])
     else:
-        bundled, packages, system = stage_linux(spec, executable, stage)
+        shutil.copy2(executable, stage / executable.name)
+        if name == 'windows':
+            bundled, packages, system = stage_windows(spec, executable, stage)
+        elif name == 'haiku':
+            bundled, packages, system = [], [], ''
+        else:
+            bundled, packages, system = stage_linux(spec, executable, stage)
 
     for document in ('LICENSE', 'THIRD-PARTY-NOTICES.md'):
         shutil.copy2(ROOT / document, stage / document)
@@ -189,9 +217,14 @@ def main():
 
     archive = DIST / f'{package}.zip'
     archive.unlink(missing_ok=True)
-    # zip records Unix permissions, so fyodor stays executable after unzip.
-    subprocess.run(['zip', '-qr', '-y', archive.name, package], cwd=DIST,
-                   check=True)
+    if name == 'macos':
+        # ditto keeps the bundle's signature, symlinks and metadata intact.
+        subprocess.run(['ditto', '-c', '-k', '--keepParent', package,
+                        archive.name], cwd=DIST, check=True)
+    else:
+        # zip records Unix permissions, so fyodor stays executable after unzip.
+        subprocess.run(['zip', '-qr', '-y', archive.name, package], cwd=DIST,
+                       check=True)
     print(archive)
 
 

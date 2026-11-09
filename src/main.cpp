@@ -29,7 +29,7 @@ int run_common(const app::options &settings, bool &finished) {
         return 0;
     }
     if (settings.show_version) {
-        std::cout << "Writer (fyodor) " << FYODOR_VERSION << '\n';
+        std::cout << "Fyodor " << FYODOR_VERSION << '\n';
         return 0;
     }
     if (settings.convert_to || settings.dump_layout)

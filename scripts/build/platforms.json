@@ -136,10 +136,10 @@
             "title": "Linux (GEMix)",
             "requires": [
                 "64-bit x86 Linux with glibc 2.35 or newer.",
-                "A running GEMix `gemd` server. Writer is a GEM client and connects to the server named by `GEMD_SOCKET`; it does not start one."
+                "A running GEMix `gemd` server. Fyodor is a GEM client and connects to the server named by `GEMD_SOCKET`; it does not start one."
             ],
             "run": [
-                "Start Writer from a GEMix session, or point it at the server:",
+                "Start Fyodor from a GEMix session, or point it at the server:",
                 "",
                 "```sh",
                 "GEMD_SOCKET=/path/to/gemd.sock ./fyodor document.abw",
@@ -156,7 +156,7 @@
             "title": "Haiku",
             "requires": [
                 "64-bit (x86_64) Haiku.",
-                "No extra packages: Writer uses only system libraries."
+                "No extra packages: Fyodor uses only system libraries."
             ],
             "run": [
                 "Unzip, then double-click `fyodor` in Tracker, or from Terminal:",
@@ -216,10 +216,38 @@
             "title": "Windows",
             "requires": [
                 "64-bit Windows 10 or 11.",
-                "[Windows App Runtime 1.8 (x64)](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads). Install it once; Writer will not start without it."
+                "[Windows App Runtime 1.8 (x64)](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads). Install it once; Fyodor will not start without it."
             ],
             "run": [
                 "Unzip the folder and run `fyodor.exe`. Keep the DLLs beside it."
+            ]
+        }
+    },
+    "macos": {
+        "host": "Darwin",
+        "runner": "macos-15",
+        "cmake": [
+            "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
+            "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0"
+        ],
+        "bundle": "Fyodor.app",
+        "package": {
+            "title": "macOS",
+            "requires": [
+                "macOS 13 Ventura or newer, on Apple silicon or Intel (universal binary)."
+            ],
+            "run": [
+                "Drag `Fyodor.app` to Applications, or run it from this folder.",
+                "",
+                "The app is not signed with an Apple Developer ID, so macOS blocks the",
+                "first launch. Either Control-click `Fyodor.app`, choose **Open**, then",
+                "**Open** again; or, on macOS 15 and later, open it once, then allow it in",
+                "**System Settings > Privacy & Security > Open Anyway**. From Terminal:",
+                "",
+                "```sh",
+                "xattr -dr com.apple.quarantine Fyodor.app",
+                "open Fyodor.app",
+                "```"
             ]
         }
     }

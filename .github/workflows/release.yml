@@ -1,5 +1,6 @@
-# Build every Native backend in its Docker SDK and publish one zip per
-# platform. A tag like v1.2.3 creates a GitHub release with the zips attached.
+# Build every Native backend (Linux, Haiku and Windows in Docker SDKs, macOS
+# on a GitHub-hosted Mac) and publish one zip per platform. A tag like v1.2.3
+# creates a GitHub release with the zips attached.
 # Run by hand (Actions > Release > Run workflow) for a dry run: the zips are
 # kept as workflow artifacts and no tag or release is created.
 name: Release
@@ -37,13 +38,17 @@ jobs:
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os
-          known = list(json.load(open('scripts/build/platforms.json')))
+          specs = json.load(open('scripts/build/platforms.json'))
+          known = list(specs)
           wanted = os.environ['WANTED'].split()
           names = known if wanted == ['all'] else wanted
           unknown = sorted(set(names) - set(known))
           if unknown:
               raise SystemExit(f'unknown platforms: {unknown}; known: {known}')
-          print('platforms=' + json.dumps(names))
+          # Docker SDK backends run on Ubuntu; host backends name a runner.
+          include = [{'platform': n, 'runner': specs[n].get('runner', 'ubuntu-24.04')}
+                     for n in names]
+          print('platforms=' + json.dumps(include))
           PY
           if [ "$GITHUB_REF_TYPE" = tag ]; then
             echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
@@ -53,15 +58,17 @@ jobs:
 
   build:
     needs: plan
-    runs-on: ubuntu-24.04
+    name: build (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(needs.plan.outputs.platforms) }}
+        include: ${{ fromJSON(needs.plan.outputs.platforms) }}
     steps:
       - uses: actions/checkout@v4
       - name: Install packaging tools
+        if: runner.os == 'Linux'
         run: sudo apt-get update -q && sudo apt-get install -y -q patchelf zip
       - name: Build and package
         run: |
@@ -96,4 +103,4 @@ jobs:
           cd dist
           sha256sum *.zip > SHA256SUMS
           gh release create "$GITHUB_REF_NAME" *.zip SHA256SUMS \
-              --title "Writer $GITHUB_REF_NAME" --generate-notes --verify-tag
+              --title "Fyodor $GITHUB_REF_NAME" --generate-notes --verify-tag

@@ -1,6 +1,6 @@
-# Writer
+# Fyodor
 
-Writer (codename **fyodor**) is a word processor rebuilt from the ground up from
+Fyodor is a word processor rebuilt from the ground up from
 [AbiWord](https://github.com/fork-vault/abiword), in modern C++20, on the
 Native UI library. It reads and writes AbiWord's `.abw` files.
 
@@ -12,20 +12,23 @@ before saving a file that uses them.
 ## Build and run
 
 ```sh
-make -j8                     # bin/fyodor: desktop
-bin/fyodor document.abw
-make headless -j8            # bin/fyodor-headless: no display dependency
-bin/fyodor-headless in.abw --to out.html
-make debug -j8               # bin/fyodor-debug with sanitizers
+make                         # bin/fyodor: desktop
+make run                     # build, then open it on your desktop
+make headless                # bin/fyodor-headless: no display dependency
+make debug                   # bin/fyodor-debug with ASan and UBSan
 make clean                   # remove build/ and bin/
 ```
 
-Dependencies: Linux, GCC with C++20, GNU make 4.3+, `flock`, CMake 3.20 and Python 3.
+Dependencies: Linux with Docker, GNU make, Python 3 and an X11 or Xwayland
+desktop. Every build goal runs inside the `wischner/gcc-x86_64-linux-sdl` image
+(GCC 11, CMake, SDL2 and the other development packages), so the host needs no
+compiler or headers. Objects go to `build/sdl2/`, binaries to `bin/`. `make run`
+and the `SDL2, Local` F5 profile run the binary in the same image, drawing on
+your desktop through its X11 socket.
 [Native](https://github.com/wischner/native) (branch
 `fyodor-native-extensions`) is cloned into `build/deps/native` on first build;
 `make update-native` moves it to the branch's newest commit. To build against
-your own checkout, pass `NATIVE_ROOT=/path/to/native`. On Ubuntu without development headers the build
-fetches them into `build/sdk/` and installs nothing.
+your own checkout, pass `NATIVE_ROOT=/path/to/native`.
 
 **VS Code F5** builds and debugs the selected backend. Profiles are named
 `<name>, <env>`: `SDL2, Local`, `X11, Xephyr`, `GEM, Rasta` and so on.
@@ -42,15 +45,14 @@ Native's SDL2 backend; `make platform-test` builds the others. See
 ## Tests
 
 ```sh
-make test                    # unit tests, no display
+make test                    # unit tests under ASan and UBSan, no display
 make ui-test                 # the real window, through Native's input hooks
-make docker-test             # unit tests under ASan and UBSan
 make platform-test           # every backend SDK; PLATFORM=linux-x11 for one
 make list-platforms
 ```
 
-See [testing](docs/notes/TESTING.md). ASan cannot start on hosts that preload a
-security agent; see [that note](docs/notes/HOST-ASAN.md).
+See [testing](docs/notes/TESTING.md). Tests run in Docker, so ASan works even
+on hosts that preload a security agent; see [that note](docs/notes/HOST-ASAN.md).
 
 ## Releases
 

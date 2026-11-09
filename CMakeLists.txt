@@ -1,5 +1,5 @@
-# Writer (codename fyodor) on any Native backend. `make` remains the
-# local entry point; this file is what the platform SDKs build.
+# Fyodor on any Native backend. `make` remains the local entry point; this
+# file is what the platform SDKs build.
 cmake_minimum_required(VERSION 3.20)
 project(fyodor LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
@@ -26,6 +26,12 @@ target_compile_options(fyodor_options INTERFACE
     $<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic>)
 target_compile_definitions(fyodor_options INTERFACE
     FYODOR_VERSION="${FYODOR_VERSION}")
+# Native's probe found std::jthread only behind libc++'s experimental
+# library; its add_compile_options does not reach this directory.
+if(APPLE AND NOT NATIVE_HAS_CXX20_THREADS)
+    target_compile_options(fyodor_options INTERFACE -fexperimental-library)
+    target_link_options(fyodor_options INTERFACE -fexperimental-library)
+endif()
 
 set(core_sources)
 foreach(name ${libraries})
@@ -63,8 +69,15 @@ add_library(fyodor_ui STATIC ${ui_sources} "${resource_cpp}")
 target_include_directories(fyodor_ui PUBLIC src/ui)
 target_link_libraries(fyodor_ui PUBLIC fyodor_core native)
 
-add_executable(fyodor WIN32 src/main.cpp)
+add_executable(fyodor WIN32 MACOSX_BUNDLE src/main.cpp)
 target_link_libraries(fyodor PRIVATE fyodor_ui)
+if(APPLE)
+    set_target_properties(fyodor PROPERTIES
+        MACOSX_BUNDLE_BUNDLE_NAME "Fyodor"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.wischner.fyodor"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${FYODOR_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${FYODOR_VERSION}")
+endif()
 
 add_executable(test_desktop tests/ui/test_desktop.cpp tests/ui/test_resources.cpp
     tests/ui/test_selection.cpp)

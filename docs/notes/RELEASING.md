@@ -1,8 +1,9 @@
 # Releasing
 
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) builds
-every backend in [`platforms.json`](../../scripts/build/platforms.json) in its
-Docker SDK. It publishes one zip per backend, for example
+every backend in [`platforms.json`](../../scripts/build/platforms.json): Linux,
+Haiku and Windows in their Docker SDKs, and macOS on a GitHub-hosted Mac
+(`macos-15`, Xcode's Apple clang). It publishes one zip per backend, for example
 `fyodor-1.2.3-haiku.zip` or `fyodor-1.2.3-linux-gemix-gemd.zip`, plus
 `SHA256SUMS`.
 
@@ -47,5 +48,10 @@ git tag -f v1.2.3 && git push -f origin v1.2.3
 - **Windows:** the MinGW runtime DLLs, the Windows App Runtime bootstrap DLL
   and the Windows App SDK license texts. Users install Windows App Runtime 1.8.
 - **Haiku:** the executable alone; it links only system libraries.
+- **macOS:** a universal (arm64 + x86_64) `Fyodor.app`, macOS 13 or newer,
+  signed ad hoc. Packaging fails if the app links any library outside
+  `/System` or `/usr/lib`. It is not Developer ID signed or notarized, so users
+  must approve the first launch; the README explains how. `package.py macos`
+  runs only on a Mac; `platforms.py all` skips it elsewhere.
 
 The GEMix zip is a `gemd` client and needs a GEMix server already running.

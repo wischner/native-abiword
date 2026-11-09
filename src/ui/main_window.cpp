@@ -171,7 +171,7 @@ std::vector<std::string> zoom_labels() {
 } // namespace
 
 main_window::main_window(const app::options &settings)
-    : native::app_wnd("Writer", 60, 40, 1000, 760), settings_(settings),
+    : native::app_wnd("Fyodor", 60, 40, 1000, 760), settings_(settings),
       style_box_(doc::builtin_style_names(),
                  native::combo_box_style::drop_down_list, 6, 5, 150, 24),
       font_box_(fonts_.families(), native::combo_box_style::drop_down_list,
@@ -462,7 +462,7 @@ void main_window::update_title() {
                                  ? std::string("Untitled")
                                  : document.path().filename().string();
     const bool dirty = document.table().history().is_dirty();
-    set_title((dirty ? "*" : "") + name + " - Writer");
+    set_title((dirty ? "*" : "") + name + " - Fyodor");
 }
 
 void main_window::update_state() {
