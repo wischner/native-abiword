@@ -81,19 +81,22 @@
         "image": "native-wayland-sdk:24.04",
         "cmake": [
             "-DTOOLKIT=WAYLAND"
-        ]
+        ],
+        "dockerfile": "{native}/scripts/linux/wayland"
     },
     "linux-elementary": {
         "image": "native-wayland-sdk:24.04",
         "cmake": [
             "-DTOOLKIT=ELEMENTARY"
-        ]
+        ],
+        "dockerfile": "{native}/scripts/linux/wayland"
     },
     "windows": {
         "image": "native-windows-winui-sdk:24.04",
         "cmake": [
             "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-mingw.cmake"
         ],
-        "suffix": ".exe"
+        "suffix": ".exe",
+        "dockerfile": "{native}/scripts/windows/winui"
     }
 }

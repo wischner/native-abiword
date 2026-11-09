@@ -1,7 +1,7 @@
 # Writer
 
 Writer (codename **fyodor**) is a word processor rebuilt from the ground up from
-[AbiWord](https://gitlab.gnome.org/World/AbiWord), in modern C++20, on the
+[AbiWord](https://github.com/fork-vault/abiword), in modern C++20, on the
 Native UI library. It reads and writes AbiWord's `.abw` files.
 
 It is an early port. Paragraph and character formatting, styles, tabs, pages,
@@ -21,8 +21,10 @@ make clean                   # remove build/ and bin/
 ```
 
 Dependencies: Linux, GCC with C++20, GNU make 4.3+, `flock`, CMake 3.20 and Python 3.
-Native comes from the sibling `../native` checkout; override with
-`NATIVE_ROOT=/path/to/native`. On Ubuntu without development headers the build
+[Native](https://github.com/wischner/native) (branch
+`fyodor-native-extensions`) is cloned into `build/deps/native` on first build;
+`make update-native` moves it to the branch's newest commit. To build against
+your own checkout, pass `NATIVE_ROOT=/path/to/native`. On Ubuntu without development headers the build
 fetches them into `build/sdk/` and installs nothing.
 
 **VS Code F5** builds and debugs the selected backend. Profiles are named

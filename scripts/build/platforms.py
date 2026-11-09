@@ -11,7 +11,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-NATIVE = Path(os.environ.get('NATIVE_ROOT', ROOT.parent / 'native')).resolve()
+NATIVE = Path(os.environ.get('NATIVE_ROOT') or subprocess.run(
+    ['sh', str(ROOT / 'scripts/build/fetch_native.sh')], check=True,
+    capture_output=True, text=True).stdout.strip()).resolve()
 PLATFORMS = json.loads((ROOT / 'scripts/build/platforms.json').read_text())
 TIMEOUT = 1800
 BUILD_TYPES = {'release': 'Release', 'debug': 'Debug'}
@@ -22,9 +24,24 @@ def build_dir(name, mode):
     return ROOT / 'build/platforms' / name / mode
 
 
+def ensure_image(spec):
+    """Build an SDK image that is not on Docker Hub from Native's Dockerfile."""
+    if 'dockerfile' not in spec:
+        return True
+    image = spec['image']
+    if subprocess.run(['docker', 'image', 'inspect', image],
+                      capture_output=True).returncode == 0:
+        return True
+    context = spec['dockerfile'].format(native=NATIVE)
+    return subprocess.run(['docker', 'build', '-t', image, context]
+                          ).returncode == 0
+
+
 def run_one(name, mode, build_only, resources_only=False):
     """Return 'passed', or the failing stage."""
     spec = PLATFORMS[name]
+    if not ensure_image(spec):
+        return 'image build failed'
     build = build_dir(name, mode)
     resource_args = []
     if any('CMAKE_TOOLCHAIN_FILE' in part for part in spec['cmake']):

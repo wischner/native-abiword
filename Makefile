@@ -6,7 +6,9 @@ MODE ?= release
 CXX := g++
 CC := gcc
 AR := ar
-NATIVE_ROOT ?= $(if $(wildcard $(ROOT)/../native/include/native.h),$(abspath $(ROOT)/../native),$(ROOT)/build/deps/native)
+# Native is cloned from GitHub on first use; NATIVE_ROOT=/path uses a checkout.
+NATIVE_DEFAULT := $(ROOT)/build/deps/native
+NATIVE_ROOT ?= $(NATIVE_DEFAULT)
 VERSION ?= 0.1.0
 NATIVE_BUILD := $(BUILD)/native-$(MODE)
 NATIVE_ARCHIVE := $(NATIVE_BUILD)/native/lib/native/libnative.a
@@ -47,6 +49,7 @@ $(LIB_NAMES):
 	+flock "$(OBJROOT)/$@.lock" $(MAKE) --no-print-directory -C lib/$@
 native:
 	@mkdir -p "$(BUILD)"
+	$(if $(filter $(NATIVE_DEFAULT),$(NATIVE_ROOT)),@sh scripts/build/fetch_native.sh >/dev/null)
 	+flock "$(BUILD)/native-$(MODE).lock" sh src/ui/build_native.sh \
 	    "$(NATIVE_ROOT)" "$(NATIVE_BUILD)" "$(NATIVE_CONFIG)"
 app: libs native
@@ -54,7 +57,10 @@ app: libs native
 resources: native
 	@mkdir -p "$(OBJROOT)"
 	+flock "$(OBJROOT)/src.lock" $(MAKE) --no-print-directory -C src resources
-.PHONY: resources
+.PHONY: resources update-native
+# Move build/deps/native to the newest commit of its branch.
+update-native:
+	sh scripts/build/fetch_native.sh --update >/dev/null
 headless: libs
 	+flock "$(OBJROOT)/src.lock" $(MAKE) --no-print-directory -C src headless
 release:
