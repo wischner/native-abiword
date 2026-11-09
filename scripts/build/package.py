@@ -127,10 +127,14 @@ def stage_macos(spec, bundle, stage):
     app = stage / spec['bundle']
     subprocess.run(['ditto', str(bundle), str(app)], check=True)
     binary = app / 'Contents/MacOS/fyodor'
-    links = subprocess.run(['otool', '-L', str(binary)], check=True,
-                           capture_output=True, text=True).stdout.splitlines()
-    foreign = [line.split()[0] for line in links[1:]
-               if not line.split()[0].startswith(('/System/', '/usr/lib/'))]
+    # A universal binary lists "<file> (architecture X):" headers, one per
+    # slice; only the tab-indented lines under them are libraries.
+    links = subprocess.run(['otool', '-L', '-arch', 'all', str(binary)],
+                           check=True, capture_output=True,
+                           text=True).stdout.splitlines()
+    libraries = {line.split()[0] for line in links if line.startswith('\t')}
+    foreign = sorted(path for path in libraries
+                     if not path.startswith(('/System/', '/usr/lib/')))
     if foreign:
         sys.exit(f'macos: non-system libraries must be embedded: {foreign}')
     archs = subprocess.run(['lipo', '-archs', str(binary)], check=True,
