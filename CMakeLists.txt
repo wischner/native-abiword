@@ -70,6 +70,8 @@ target_include_directories(fyodor_ui PUBLIC src/ui)
 target_link_libraries(fyodor_ui PUBLIC fyodor_core native)
 
 add_executable(fyodor WIN32 MACOSX_BUNDLE src/main.cpp)
+# The desktop icon ships beside the executable (GEMiX converts it with resgen).
+configure_file(assets/icons/FYODOR.PNG "${CMAKE_BINARY_DIR}/bin/FYODOR.PNG" COPYONLY)
 target_link_libraries(fyodor PRIVATE fyodor_ui)
 if(APPLE)
     set_target_properties(fyodor PROPERTIES

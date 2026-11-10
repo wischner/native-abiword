@@ -54,6 +54,27 @@ make list-platforms
 See [testing](docs/notes/TESTING.md). Tests run in Docker, so ASan works even
 on hosts that preload a security agent; see [that note](docs/notes/HOST-ASAN.md).
 
+## Desktop icon
+
+Fyodor's desktop icon is [`assets/icons/FYODOR.PNG`](assets/icons/FYODOR.PNG): 32x32
+pixels, black ink on white paper, transparent outside the icon. The build
+copies it next to the executable: `make` writes `bin/FYODOR.PNG`, and every
+release zip has `FYODOR.PNG` beside `fyodor`.
+
+To build a GEMiX image, take `FYODOR.PNG` from the `linux-gemix-gemd` release
+zip, convert it with GEM's `resgen` and install it under the lowercase program
+name, matching the program entry `/opt/gem/Programs/fyodor`:
+
+```sh
+resgen icons -o fyodor.rsc FYODOR.PNG
+install -m 0644 fyodor.rsc /opt/gem/share/gem/icons/fyodor.rsc
+```
+
+GEM Desktop then shows the icon for `fyodor` in the Programs folder. Without
+the file, Desktop shows the standard program icon. GEM's
+[program deployment guide](https://github.com/triglav-os/gem/blob/main/docs/guides/PROGRAM_DEPLOYMENT.md)
+explains how Desktop finds icons.
+
 ## Releases
 
 Pushing a `vX.Y.Z` tag builds every backend and publishes one zip per

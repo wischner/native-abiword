@@ -167,6 +167,7 @@ def readme(name, spec, version, executable, bundled, packages, system):
     lines += ['## Contents', '', f'- `{executable}`: the application']
     lines += [f'- `{item}`: shipped with Fyodor, not a system package'
               for item in bundled]
+    lines += ['- `FYODOR.PNG`: 32x32 desktop icon']
     lines += ['- `LICENSE`, `THIRD-PARTY-NOTICES.md`: license terms']
     if name == 'windows':
         lines += ['- `licenses/`: Windows App SDK license terms']
@@ -214,6 +215,7 @@ def main():
         else:
             bundled, packages, system = stage_linux(spec, executable, stage)
 
+    shutil.copy2(binaries / 'FYODOR.PNG', stage / 'FYODOR.PNG')
     for document in ('LICENSE', 'THIRD-PARTY-NOTICES.md'):
         shutil.copy2(ROOT / document, stage / document)
     (stage / 'README.md').write_text(
