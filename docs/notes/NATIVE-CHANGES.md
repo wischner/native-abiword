@@ -1,7 +1,8 @@
 # Native changes made for fyodor
 
 These extend [Native](https://github.com/wischner/native) on its
-`fyodor-native-extensions` branch. A contract added to Native has to work on
+`master` branch, which includes the former `fyodor-native-extensions` branch.
+A contract added to Native has to work on
 every backend, so nothing here is SDL2-only. Native's `FEATURE-MATRIX.md` carries
 per-backend status.
 
@@ -51,6 +52,20 @@ editing alone. Debug rasterization and instrumentation remain a substantial
 cost; the Release comparison above must not be read as F5 performance.
 
 ## Square icon tools
+
+Fyodor's two toolbar rows use Native's toolbar metrics instead of an
+application-defined 30-pixel band. GEM's metrics follow the same
+`gemctl_chrome_layout` used by Gemscape and Ted. Native owns slot spacing,
+field height, borders, clipping and placement; the application supplies only
+control widths. Single-line GEM fields fit inside the band rather than
+retaining the generic 24-pixel height.
+
+Common command artwork comes from `native::standard_icon(standard_icon_id)`.
+The shared GEM catalog contains Ted's unchanged 16×16 New, Open, Save,
+Save As, Undo, Cut, Copy and Paste bitmaps. Missing standard artwork returns
+null, preserving the application resource fallback. These shared changes
+are available on Native's `master` branch. Run `make update-native` to refresh
+the cached Git dependency, or select a checkout with `NATIVE_ROOT=/path/to/native`.
 
 `toolbar` tools with an icon and no text are square, as long as the strip
 is thick, in the shared `item_bounds` layout. `get_item_bounds(id)` exposes

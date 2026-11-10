@@ -5,7 +5,7 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 url=${NATIVE_URL:-https://github.com/wischner/native.git}
-ref=${NATIVE_REF:-fyodor-native-extensions}
+ref=${NATIVE_REF:-master}
 dest="$root/build/deps/native"
 if test ! -e "$dest/include/native.h"; then
     rm -rf -- "$dest"

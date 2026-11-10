@@ -26,7 +26,7 @@ compiler or headers. Objects go to `build/sdl2/`, binaries to `bin/`. `make run`
 and the `SDL2, Local` F5 profile run the binary in the same image, drawing on
 your desktop through its X11 socket.
 [Native](https://github.com/wischner/native) (branch
-`fyodor-native-extensions`) is cloned into `build/deps/native` on first build;
+`master`) is cloned into `build/deps/native` on first build;
 `make update-native` moves it to the branch's newest commit. To build against
 your own checkout, pass `NATIVE_ROOT=/path/to/native`.
 
@@ -37,6 +37,19 @@ Toolbar graphics are embedded with Native's resource compiler. GEM and X11
 automatically select black-and-white icons; Native supplies menu and toolbar
 highlights. See [graphics resources](src/resources/README.md) for regeneration
 and cross-build details.
+
+Both toolbar rows use Native's toolbar and field metrics. Common GEM commands
+reuse Ted's standard icons through Native's shared catalog. To update the
+cached Native source and build with the current GEMix SDK:
+
+```sh
+docker pull wischner/gcc-x86_64-gemix:latest
+make update-native
+make platform-test PLATFORM=linux-gemix-gemd
+```
+
+The [GEM UI audit](docs/notes/GEM-UI.md) records the reference applications,
+shared controls, icon sources and remaining custom document rendering.
 
 All application UI goes through Native's public API. The default build selects
 Native's SDL2 backend; `make platform-test` builds the others. See

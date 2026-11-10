@@ -23,7 +23,6 @@
 namespace ui {
 namespace {
 
-constexpr int bar_extent = 30;
 constexpr int ruler_extent = 22;
 
 // A label and its document value for the color choices.
@@ -68,8 +67,7 @@ constexpr std::array<tool_entry, 11> tools{{
 }};
 
 // The format bar's plain tools, after its hosted combo boxes.
-constexpr std::array<tool_entry, 10> format_tools{{
-    {"", native::tool_kind::separator, ""},
+constexpr std::array<tool_entry, 9> format_tools{{
     {"toggleBold", native::tool_kind::toggle, ""},
     {"toggleItalic", native::tool_kind::toggle, ""},
     {"toggleUline", native::tool_kind::toggle, ""},
@@ -106,7 +104,7 @@ native::tool_item make_tool(const tool_entry &entry) {
     return item;
 }
 
-// Return a hosted control item.
+// Join hosted fields into one strip with a single divider per control.
 native::tool_item make_control(const char *id, native::wnd &control,
                                int length) {
     native::tool_item item;
@@ -114,7 +112,19 @@ native::tool_item make_control(const char *id, native::wnd &control,
     item.kind = native::tool_kind::control;
     item.control = &control;
     item.length = length;
+    item.control_fill_width = true;
+    control.set_border_sides(native::border_sides::right);
     return item;
+}
+
+// Reserve one square tool slot between command groups.
+void size_toolbar_separators(native::toolbar &bar, int padding) {
+    auto items = bar.get_items();
+    for (auto &item : items) {
+        if (item.kind == native::tool_kind::separator)
+            item.length = bar.get_extent() - 2 * padding;
+    }
+    bar.set_items(std::move(items));
 }
 
 // Return layout units as inches.
@@ -173,16 +183,12 @@ std::vector<std::string> zoom_labels() {
 main_window::main_window(const app::options &settings)
     : native::app_wnd("Fyodor", 60, 40, 1000, 760), settings_(settings),
       style_box_(doc::builtin_style_names(),
-                 native::combo_box_style::drop_down_list, 6, 5, 150, 24),
-      font_box_(fonts_.families(), native::combo_box_style::drop_down_list,
-                162, 5, 220, 24),
-      size_box_({}, native::combo_box_style::drop_down_list, 388, 5, 72, 24),
-      color_box_({}, native::combo_box_style::drop_down_list, 466, 5, 100,
-                 24),
-      zoom_box_(zoom_labels(), native::combo_box_style::drop_down_list, 572,
-                5, 80, 24),
-      canvas_(fonts_), toolbar_(*this, native::window_edge::top, bar_extent),
-      format_bar_(*this, native::window_edge::top, bar_extent),
+                 native::combo_box_style::drop_down_list),
+      font_box_(fonts_.families(), native::combo_box_style::drop_down_list),
+      size_box_({}, native::combo_box_style::drop_down_list),
+      color_box_({}, native::combo_box_style::drop_down_list),
+      zoom_box_(zoom_labels(), native::combo_box_style::drop_down_list),
+      canvas_(fonts_), toolbar_(*this), format_bar_(*this),
       top_ruler_(canvas_, native::window_edge::top, ruler_extent),
       left_ruler_(canvas_, native::window_edge::left, ruler_extent),
       status_(*this, canvas_), open_dialog_(*this, "Open"),
@@ -230,8 +236,13 @@ main_window::main_window(const app::options &settings)
         });
 
     on_wnd_create.connect([this] {
-        status_.set_extent(
-            native::theme::create(get_gpx())->get_status_bar_height());
+        const auto appearance = native::theme::create(get_gpx());
+        // Native also reserves the hosted fields' natural height/insets.
+        toolbar_.set_extent(appearance->get_toolbar_height());
+        format_bar_.set_extent(appearance->get_toolbar_height());
+        size_toolbar_separators(toolbar_, appearance->defaults().toolbar_padding);
+        size_toolbar_separators(format_bar_, appearance->defaults().toolbar_padding);
+        status_.set_extent(appearance->get_status_bar_height());
         canvas_.create();
         canvas_.show();
         place_children();
@@ -261,7 +272,6 @@ main_window::~main_window() {
 void main_window::build_toolbar() {
     for (const tool_entry &entry : tools)
         toolbar_.add_item(make_tool(entry));
-    toolbar_.add_item(make_tool({"", native::tool_kind::separator, ""}));
     toolbar_.add_item(make_control("zoomBox", zoom_box_, 80));
     const auto run_tool = [this](native::tool_command command) {
         run(command.id);

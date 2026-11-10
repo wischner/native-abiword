@@ -3,7 +3,15 @@
 `fyodor.json` declares 17 toolbar icons under `icons.toolbar.<command>`.
 Each has an unqualified color PNG and a `color: monochrome` PNG. Native's
 `resources::get()` selects the latter automatically on GEMix and X11.
-The same names can be used by future consumers of these graphics.
+These are fallbacks: `ui::tool_icon()` first asks Native's `standard_icon()`
+for common commands. GEM supplies Ted's original 16×16 New, Open, Save,
+Save As, Undo, Cut, Copy and Paste bitmaps from one shared Native catalog.
+Fyodor contains no copies of that artwork. Save As remains a menu command;
+the lookup supports its icon without adding a new toolbar action.
+
+The audited Ted catalog has no Redo, Close, Print or Find icon. Redo, Find
+and document-formatting tools retain their existing fallback drawings.
+Other backends keep their existing resources when Native returns no icon.
 
 Both variants preserve Fyodor's existing 16×16 drawings. These are original
 project artwork, copyright 2026 Tomaz Stih, GPL-2.0-or-later, not downloaded
@@ -25,7 +33,7 @@ are replaced by this manifest and the public Native resource API.
 | Entry point | Responsibility |
 | --- | --- |
 | `ui::graphics_resources()` | Decode the embedded bytes once into an immutable owning `native::resources` container |
-| `ui::tool_icon(command)` | Resolve `icons.toolbar.<command>` using the active Native context and decode the selected PNG; unknown commands return null |
+| `ui::tool_icon(command)` | Prefer Native's shared standard command icon; otherwise resolve and decode `icons.toolbar.<command>`; unknown commands return null |
 | `export_icons` | Reproduce both asset sets from the original drawing functions, outside normal application builds |
 | Native `rc` | Validate the manifest and generate the pack and embedded translation unit |
 
@@ -46,7 +54,7 @@ or Haiku cross-compilation and passes `FYODOR_RESOURCE_CPP` to the destination
 build. A manual cross-build must supply that generated file explicitly.
 Never run a cross-compiled `rc` on the build host.
 
-The executable embeds all variants and needs no asset files at runtime.
+The executable embeds all fallback variants and needs no asset files at runtime.
 Headless builds have no resource or Native dependency. New graphics belong
 in the same manifest, because Native rc emits one fixed accessor per program.
 PNG and manifest changes rebuild the pack and relink its consumers.

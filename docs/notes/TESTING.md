@@ -27,6 +27,16 @@ lookup and Native theme feedback. On monochrome backends it checks the
 selected background is black and the selected foreground is white. These
 checks run within the desktop test after window creation.
 
+Toolbar layout checks cover both rows, native field heights and centering,
+square command slots, separator lengths and actual gaps between command groups,
+and resizing down to 640 pixels and back. Resource checks
+verify shared standard-icon identity for GEM commands and preserve embedded
+fallback checks for other tools/backends. The desktop test prints the actual
+band, field and icon dimensions alongside its results.
+Joined-field checks require right-only combo borders
+and contiguous style, font, size, color and Bold rectangles,
+including after window resizing.
+
 `test_selection.cpp` paints actual document text through `native_painter`.
 At 75%, 100% and 150% zoom with scrolling, it selects part of a word across
 colored text with a background and decorations. It checks Native selection
@@ -60,11 +70,22 @@ Logs land in `build/platforms/<name>/<mode>/`.
 
 F5 profiles are named `<name>, <env>`, such as `GEM, Rasta`. Each builds through
 the same script and debugs through `scripts/debug/linux.py`.
+The GEM session wrapper monitors both Rasta and the launched command, following
+Native's Rasta session cleanup pattern. Closing the outer viewer ends its
+private debugger/server/inferior session; command exit removes the viewer and
+preserves the command's status. GDB/MI keeps its input pipe open and session
+logs go to stderr. The viewer-close regression was reproduced with the old
+wrapper and passes with this cleanup using `gcc-x86_64-gemix:latest`, Xvfb,
+and the existing F5 Debug executable. Diagnostic scripts and captures are in
+`build/shutdown-check/`. A real X11 mouse click on Fyodor's own close button
+also reports `exited-normally` through GDB/MI; command-exit status preservation
+and removal of the viewer pass in both checks.
 
 The GEM toolbar-popup regression is in Native's existing
 `tests/native_gemix_control_checks.cpp`, executed by
 `native_gemix_input_tests`. It uses real Rasta packets, checks font/size row
-selection over a canvas, dropdown/change notifications, outside dismissal,
+selection over a canvas in the standard compact toolbar band,
+dropdown/change notifications, outside dismissal,
 and resumed document input without a leaked click. Both direct GEM and gemd
 pass. Fyodor's `test_format_bar` checks the application callbacks for style,
 font, size, color and zoom; it does not substitute for that backend test.

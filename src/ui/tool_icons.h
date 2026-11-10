@@ -1,5 +1,5 @@
 //
-// Embedded toolbar artwork selected by Native for the current backend.
+// Shared Native command artwork with embedded application fallbacks.
 // GEM and X11 receive binary ink masks; other backends receive color icons.
 //
 // GPL 2.0 or later (see: LICENSE)

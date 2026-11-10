@@ -51,6 +51,7 @@ public:
         CHECK(canvas_.get_created());
         test_resources();
         test_selection();
+        test_toolbar_layout();
         CHECK(window_.status_.get_extent() ==
               native::theme::create(window_.get_gpx())->get_status_bar_height());
         if (native::resources::current_context().toolkit == "gemix") {
@@ -125,6 +126,89 @@ public:
     }
 
 private:
+    // Both rows use the backend band; hosted native fields must stay
+    // inside it, including after shrinking and restoring the window.
+    void test_toolbar_layout() {
+        const auto appearance = native::theme::create(window_.get_gpx());
+        const auto check_layout = [&] {
+            for (auto *bar : {&window_.toolbar_, &window_.format_bar_}) {
+                CHECK(bar->get_extent() >= appearance->get_toolbar_height());
+                if (native::resources::current_context().toolkit == "gemix")
+                    CHECK(bar->get_extent() == appearance->get_toolbar_height());
+                const auto strip = bar->get_bounds();
+                for (const auto &item : bar->get_items()) {
+                    if (item.kind == native::tool_kind::separator) {
+                        CHECK(item.length == bar->get_extent() -
+                              2 * appearance->defaults().toolbar_padding);
+                        continue;
+                    }
+                    const auto slot = bar->get_item_bounds(item.id);
+                    if (!slot.w() || !slot.h())
+                        continue;
+                    if (item.control) {
+                        const auto bounds = item.control->get_bounds();
+                        CHECK(item.control->get_border_sides() ==
+                              native::border_sides::right);
+                        CHECK(bounds.x1() == slot.x1());
+                        CHECK(bounds.w() == slot.w());
+                        CHECK(bounds.y1() >= 0);
+                        CHECK(bounds.y2() <= strip.h());
+                        CHECK(bounds.h() == appearance->get_text_edit_height());
+                        CHECK(std::abs(int(bounds.y1()) -
+                              (int(strip.h()) - int(bounds.h())) / 2) <= 1);
+                    } else {
+                        CHECK(item.icon != nullptr);
+                        CHECK(item.text.empty());
+                        // Other backends retain their clipped last slot;
+                        // GEM follows Ted and hides incomplete buttons.
+                        const bool clipped = slot.w() < slot.h() &&
+                            slot.x2() == strip.w() -
+                                appearance->defaults().toolbar_padding;
+                        if (clipped) {
+                            CHECK(native::resources::current_context().toolkit != "gemix");
+                            continue;
+                        }
+                        CHECK(slot.w() == slot.h());
+                        CHECK(slot.w() >= item.icon->w() + 4);
+                        CHECK(slot.h() >= item.icon->h());
+                    }
+                }
+            }
+            CHECK(window_.toolbar_.get_bounds().y2() ==
+                  window_.format_bar_.get_bounds().y1());
+            CHECK(window_.style_box_.get_bounds().x2() ==
+                  window_.font_box_.get_bounds().x1());
+            CHECK(window_.font_box_.get_bounds().x2() ==
+                  window_.size_box_.get_bounds().x1());
+            CHECK(window_.size_box_.get_bounds().x2() ==
+                  window_.color_box_.get_bounds().x1());
+            CHECK(window_.color_box_.get_bounds().x2() ==
+                  window_.format_bar_.get_item_bounds("toggleBold").x1());
+            const auto check_separator = [](native::toolbar &bar,
+                                             const char *before, const char *after) {
+                const auto left = bar.get_item_bounds(before);
+                const auto right = bar.get_item_bounds(after);
+                if (left.w() && right.w())
+                    CHECK(right.x1() - left.x2() == right.h());
+            };
+            check_separator(window_.toolbar_, "fileSave", "undo");
+            check_separator(window_.toolbar_, "redo", "cut");
+            check_separator(window_.format_bar_, "toggleStrike", "alignLeft");
+        };
+        check_layout();
+        const auto original = window_.get_bounds();
+        window_.set_bounds(native::rect(original.x1(), original.y1(),
+                                        640, original.h()));
+        check_layout();
+        window_.set_bounds(original);
+        check_layout();
+        std::cout << "toolbar rows: " << window_.toolbar_.get_extent()
+                  << "/" << window_.format_bar_.get_extent()
+                  << ", combo: " << window_.font_box_.get_dimensions().h
+                  << ", icons: " << window_.toolbar_.get_icon_size().w
+                  << "x" << window_.toolbar_.get_icon_size().h << '\n';
+    }
+
     void type(const std::string &utf8) {
         // A fresh, unhandled physical key precedes committed text. Native
         // suppresses text belonging to the last handled shortcut (Enter,

@@ -8,12 +8,32 @@
 #include "test_resources.h"
 
 #include <algorithm>
+#include <array>
 #include <string_view>
 
 #include "check.h"
 #include "tool_icons.h"
 
 namespace {
+
+// Independently map the commands with established Ted artwork. Other
+// commands must retain the embedded application fallback.
+std::shared_ptr<const native::img> standard_icon(std::string_view command) {
+    using id = native::standard_icon_id;
+    static constexpr std::array commands{
+        std::pair{"fileNew", id::file_new},
+        std::pair{"fileOpen", id::file_open},
+        std::pair{"fileSave", id::file_save},
+        std::pair{"fileSaveAs", id::file_save_as},
+        std::pair{"undo", id::undo},
+        std::pair{"cut", id::cut},
+        std::pair{"copy", id::copy},
+        std::pair{"paste", id::paste}};
+    for (const auto &[name, icon] : commands)
+        if (name == command)
+            return native::standard_icon(icon);
+    return nullptr;
+}
 
 // Binary ink must have no gray, color or fractional alpha to dither.
 bool is_mask(const native::img &image) {
@@ -80,12 +100,20 @@ void test_resources() {
         const auto expected = native::img::decode(active.data.data(), active.data.size());
         if (icon) {
             CHECK(icon->w() == 16 && icon->h() == 16);
-            CHECK(std::equal(icon->pixels(), icon->pixels() + 256, expected.pixels()));
+            if (const auto stock = standard_icon(command)) {
+                CHECK(icon == stock);
+                CHECK(is_mask(*icon));
+            } else {
+                CHECK(std::equal(icon->pixels(), icon->pixels() + 256, expected.pixels()));
+            }
         }
     }
     CHECK(icons == 17);
     test_highlight();
     if (automatic.toolkit == "gemix") {
+        CHECK(ui::tool_icon("fileSaveAs") ==
+              native::standard_icon(native::standard_icon_id::file_save_as));
+        CHECK(ui::tool_icon("fileSaveAs") != nullptr);
         // Redo is initially disabled. Its gray theme tint used to become
         // white in GEM and disappear completely on the toolbar.
         for (const auto command : {"undo", "redo"}) {
