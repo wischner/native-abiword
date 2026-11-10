@@ -56,8 +56,9 @@ cost; the Release comparison above must not be read as F5 performance.
 Fyodor's two toolbar rows use Native's toolbar metrics instead of an
 application-defined 30-pixel band. GEM's metrics follow the same
 `gemctl_chrome_layout` used by Gemscape and Ted. Native owns slot spacing,
-field height, borders, clipping and placement; the application supplies only
-control widths. Single-line GEM fields fit inside the band rather than
+field height, borders, clipping and placement; the application supplies
+control widths and derives separator lengths from the band metrics.
+Single-line GEM fields fit inside the band rather than
 retaining the generic 24-pixel height.
 
 Common command artwork comes from `native::standard_icon(standard_icon_id)`.
@@ -70,6 +71,18 @@ the cached Git dependency, or select a checkout with `NATIVE_ROOT=/path/to/nativ
 `toolbar` tools with an icon and no text are square, as long as the strip
 is thick, in the shared `item_bounds` layout. `get_item_bounds(id)` exposes
 a tool's rectangle.
+
+Native commit `abdfcc7` adds `tool_item::control_fill_width`, allowing hosted
+fields to touch without horizontal insets. Fyodor sets `border_sides::right`
+on those fields. The text-color field touches Bold and the zoom field touches
+Find, without an intervening group separator.
+
+Native commit `4e6f805` makes `tool_item::length` apply to separators and adds
+the shared `draw_toolbar_separator` theme hook. Fyodor sets every group gap to
+one square button's width; GEM draws the divider at the gap's trailing edge.
+This prevents half of a centered separator from visually extending Align Left
+or another following button. Both commits are published on Native's `master`;
+`make update-native` refreshes the Git-managed dependency used by F5.
 
 ## Resource integration
 

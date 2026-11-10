@@ -102,9 +102,7 @@ cached Git checkout and build with:
 ```sh
 docker pull wischner/gcc-x86_64-gemix:latest
 make update-native
-make platform-test PLATFORM=linux-gemix-gemd
-make platform-test PLATFORM=linux-sdl2
-make test
+python3 -B scripts/build/platforms.py linux-gemix-gemd --mode debug
 ```
 
 The desktop suite checks both bands, field alignment, square icon slots,
@@ -114,35 +112,32 @@ formatting, find/replace, rulers, document loading and painting. Raw operating
 system input routing is a separate Native test responsibility; public callback
 coverage alone does not establish keyboard or mouse transport behavior.
 
-Validated outcomes:
+Verified on 2026-11-10:
 
-- GEM/gemd desktop: 651/651 checks passed; rows 20/20, fields 18, icons 16×16.
-- SDL2 desktop: 614/614 checks passed; rows 28/28, fields 24, icons 16×16.
-- Document/editing unit suites under ASan/UBSan: 353/353 checks passed.
-- Native's GEM toolbar lifecycle and real Rasta input suites passed. The
-  combo-popup input fixture uses the standard compact band and checks field
-  containment before exercising selection, dismissal and resumed input.
-- All 128 bitmap rows in the eight shared icons match the Ted source exactly.
-- Live Fyodor and SDK Ted framebuffers were captured and visually compared;
-  both use the same 20-pixel band and 16×16 command artwork.
+| Check | Result and scope |
+| --- | --- |
+| GEM/gemd F5 Debug | 819/819; normal Git-managed Native checkout at `4e6f805` |
+| Direct GEM Release | 819/819; sibling Native checkout containing the same separator changes |
+| SDL2 Release | 668/668 on the earlier joined-field revision; final separator changes have not been rerun on SDL2 |
+| Document/editing unit suites | 353/353 under ASan/UBSan during the initial UI audit |
+| Shared icon provenance | All 128 bitmap rows in the eight shared icons match Ted's source |
+| GEM visual comparison | 20-pixel rows and square buttons, 20-pixel group gaps, 18-pixel fields and 16×16 icons |
+| Debug session shutdown | Real X11 close click exits Fyodor normally; closing Rasta ends the private GDB/server/inferior session; command status is preserved |
 
-Build logs and framebuffer comparisons are under `build/ui-standardization/`
-and `build/platforms/`. This validation covers GEM/gemd and SDL2; other
-backends were not rebuilt. No interactive human acceptance session was run.
+Native's toolbar lifecycle and real Rasta input suites passed during the
+shared-control work, including combo selection over a canvas, dismissal and
+resumed input. The final application suite verifies square command bounds,
+separator lengths and actual spacing before Undo, Cut and Align Left at normal
+and reduced window widths.
 
-The joined-field change with the color field touching Bold passed 708/708
-desktop checks on direct GEM using the sibling Native checkout before restoring
-the color field's right border.
-The earlier joined-field version passed 668/668 on SDL2. Its GEM build and
-framebuffer are under `build/toolbar-borders/`. That earlier run used direct GEM
-because the then-published gemd image rejected Fyodor's complete menu and
-the updated Native adapter reported that failure. The normal Git-managed
-dependency selection is unchanged.
+Logs for the final F5 run are in
+`build/platforms/linux-gemix-gemd/debug/{configure,build,test}.log`.
+Direct GEM captures are in `build/toolbar-borders/`; shutdown diagnostics are
+in `build/shutdown-check/`. These are local build artifacts, not repository
+fixtures. Other backends were not rebuilt for the final separator revision,
+and no interactive human acceptance session was run.
 
-The square-button and button-width-separator revision passes 819/819 desktop
-checks on direct GEM with the sibling Native separator changes and the latest
-GEMIX Docker image. The framebuffer confirms the separator ends before the
-Align Left button's square selection area. The shared Native changes are now
-also present in the normal Git-managed F5 dependency.
-The GEM/gemd F5 Debug executable was rebuilt with that dependency and passes
-819/819 desktop checks, including separator spacing and square command bounds.
+The initial SDK image rejected Fyodor's complete menu through gemd. The final
+GEM/gemd validation uses the refreshed SDK listed above and succeeds with the
+complete application menu. Both the GEM SDK image and the separate Native Git
+dependency must be updated; replacing one does not refresh the other.

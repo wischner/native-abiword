@@ -68,6 +68,19 @@ backend therefore does not prove a user can type there; see
 and runs the desktop test in each image from `scripts/build/platforms.json`.
 Logs land in `build/platforms/<name>/<mode>/`.
 
+To reproduce the verified GEM F5 Debug build and its 819 desktop checks:
+
+```sh
+docker pull wischner/gcc-x86_64-gemix:latest
+make update-native
+python3 -B scripts/build/platforms.py linux-gemix-gemd --mode debug
+```
+
+`--build-only` skips the test, as the F5 prelaunch task does. The command above
+also runs it, using a private gemd server. It builds Native from
+`build/deps/native`; commit `4e6f805` or a descendant is required for the
+separator spacing checks. Docker supplies the SDK/runtime separately.
+
 F5 profiles are named `<name>, <env>`, such as `GEM, Rasta`. Each builds through
 the same script and debugs through `scripts/debug/linux.py`.
 The GEM session wrapper monitors both Rasta and the launched command, following

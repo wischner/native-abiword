@@ -1,16 +1,18 @@
 # Platform status
 
-Recorded 2026-11-06. "End to end" means real input went through the toolkit into
-the running application.
+Updated 2026-11-10 for GEM and SDL2. Other backend results remain from
+2026-11-06. "End to end" means real input went through the toolkit into the
+running application. Counts describe the last verified revision for each
+backend; they do not imply every backend has run the latest suite.
 
 | Backend | F5 profile | Builds | Desktop test | Typing verified by |
 | --- | --- | --- | --- | --- |
-| SDL2 | SDL2, Local | Yes | 403/403 (Release) | Native routing test |
+| SDL2 | SDL2, Local | Yes | 668/668 (Release; before final separator change) | Native routing test |
 | X11 | X11, Xephyr | Yes | 412/412 | End to end: click, type, Ctrl+S, saved file |
 | Motif | Motif, Xephyr | Yes | 79/79 | End to end |
 | OPEN LOOK | OPEN LOOK, Xephyr | Yes | 79/79 | End to end |
 | Window Maker | Window Maker, Xephyr | Yes | 79/79 | End to end |
-| GEM (gemd) | GEM, Rasta | Yes | 420/420 (Debug) | Real Rasta key packets in Native's input test |
+| GEM (gemd) | GEM, Rasta | Yes | 819/819 (Debug) | Real Rasta key packets in Native's input test |
 | Haiku | Haiku, VM | Cross-build | 75/77 | **Not verified** |
 | Wayland | None | Yes | Not run | **Not verified** |
 | elementary | None | Yes | Not run | **Not verified** |
@@ -42,10 +44,24 @@ The follow-up Gemscape/Ted comparison corrects GEM's theme height from 22
 to 20 pixels. A portable `set_scroll_content` call then replaces its painted
 canvas bars with genuine AES frame scrollbars, eliminating duplicate track
 reservation and the bottom gap. No toolkit checks remain in Fyodor's UI code.
-The rebuilt GEM F5 Debug executable passes 420 checks; Native's real Rasta
+The GEM F5 Debug executable at that stage passed 420 checks; Native's real Rasta
 scrollbar input and existing status geometry regressions pass. SDL2 and X11
 pass their existing suites with the same application source and API. A live
 framebuffer confirms native scrollbar sizing and the flush status boundary.
+
+The final toolbar revision passes 819/819 desktop checks on GEM/gemd Debug
+using the normal Git-managed Native dependency at `4e6f805` and the latest
+GEMIX Docker image. Both rows are 20 pixels high, all command buttons are
+20×20, group separators occupy one button width, and fields are 18 pixels high.
+Direct GEM also passes 819/819 checks. SDL2's last 668/668 run covers the joined
+fields but predates the final separator changes. See [GEM UI audit](GEM-UI.md)
+for image provenance, shared icon sources and validation scope.
+
+Under GDB/MI and Xvfb, closing Fyodor's own window exits normally. Closing
+the outer Rasta viewer terminates its private debug session and leaves no
+session processes behind. Command exit status is preserved. These lifecycle
+checks exercise the session wrapper and real mouse input separately from the
+portable desktop callback suite.
 
 ## Known limits
 

@@ -38,15 +38,22 @@ automatically select black-and-white icons; Native supplies menu and toolbar
 highlights. See [graphics resources](src/resources/README.md) for regeneration
 and cross-build details.
 
-Both toolbar rows use Native's toolbar and field metrics. Common GEM commands
-reuse Ted's standard icons through Native's shared catalog. To update the
-cached Native source and build with the current GEMix SDK:
+Both GEM toolbar rows are 20 pixels high, with 20×20 command buttons,
+20-pixel group separators and 16×16 icons. Hosted combo boxes touch their
+neighbors and draw only their right border. These dimensions come from
+Native's metrics. Common commands reuse Ted's icons through Native's shared
+catalog. To update the cached Native source and test the GEM F5 Debug build:
 
 ```sh
 docker pull wischner/gcc-x86_64-gemix:latest
 make update-native
-make platform-test PLATFORM=linux-gemix-gemd
+python3 -B scripts/build/platforms.py linux-gemix-gemd --mode debug
 ```
+
+The Docker image supplies the GEM SDK and runtime; Native is built from the
+Git checkout in `build/deps/native`, not taken from the image or automatically
+from `../native`. Use Native commit `4e6f805` or a descendant for configurable
+separator widths. Pulling the Docker image alone does not update Native.
 
 The [GEM UI audit](docs/notes/GEM-UI.md) records the reference applications,
 shared controls, icon sources and remaining custom document rendering.
