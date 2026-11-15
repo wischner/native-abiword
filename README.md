@@ -31,12 +31,14 @@ your desktop through its X11 socket.
 your own checkout, pass `NATIVE_ROOT=/path/to/native`.
 
 Native commit `426a42f` or newer is required for form sizing and explicit tab
-order. Configuration applies the reviewed compatibility patch in
-`scripts/build/native-dialogs.patch` to the selected Native source tree. It
+order. Native commit `75cdcd4` includes the dialog fixes upstream; configuration
+leaves that revision and its descendants unchanged. Older checkouts receive
+the reviewed compatibility patch in `scripts/build/native-dialogs.patch`. It
 preserves document Tab input and fixes SDL dialog keyboard handling and
 message wrapping. Already applied patches are detected; conflicting source
 changes stop configuration instead of being overwritten. `make update-native`
-removes this known patch before updating; the next build reapplies it.
+removes this known patch before updating; the next build applies it only if
+the selected revision still needs it.
 
 **VS Code F5** builds and debugs the selected backend. Profiles are named
 `<name>, <env>`: `SDL2, Local`, `X11, Xephyr`, `GEM, Rasta` and so on.

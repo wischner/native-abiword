@@ -38,10 +38,14 @@ loops bypassed that dispatcher. SDL buttons/checks also lacked physical-key
 activation, and message boxes ellipsized multi-paragraph text. The checked-in
 `scripts/build/native-dialogs.patch` fixes these in Native's owning layers.
 `patch_native.sh` checks applicability before changing any files and is
-idempotent. CMake applies it to the selected Native checkout; an incompatible
-upstream update fails explicitly and needs review. These fixes have not been
-published upstream. The patch also updates Native's architecture, custom
-control audit and feature matrix with its consumer-specific scope.
+idempotent. Native commit `75cdcd488ac5baa2ab6bc426f4f9d498a11a2909`
+published equivalent fixes upstream. CMake skips the compatibility patch on
+that commit and its descendants, leaving their implementation and documentation
+intact. Older checkouts still receive the patch; conflicting changes stop
+configuration explicitly. The compatibility patch also updates Native's
+architecture, custom control audit and feature matrix with its consumer-specific
+scope. Failed platform stages print their log tail directly, including failures
+in the host resource build used by cross-compilation.
 
 The three application preferences (zoom and the two search flags) previously
 had no persistence. They now load before the first refresh, validate values,

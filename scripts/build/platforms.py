@@ -78,11 +78,15 @@ def run_one(name, mode, build_only, resources_only=False):
         stages['test'] = run + [str(build / 'bin/test_desktop')]
     build.mkdir(parents=True, exist_ok=True)
     for stage, command in stages.items():
-        with (build / f'{stage}.log').open('w') as log:
+        log_path = build / f'{stage}.log'
+        with log_path.open('w') as log:
             result = subprocess.run(docker + command, stdout=log,
                                     stderr=subprocess.STDOUT,
                                     timeout=TIMEOUT)
         if result.returncode != 0:
+            print(f'{name}: {stage} log: {log_path}', file=sys.stderr, flush=True)
+            print(log_path.read_text(errors='replace')[-8000:],
+                  file=sys.stderr, flush=True)
             return f'{stage} failed ({result.returncode})'
     return 'passed'
 
@@ -104,10 +108,6 @@ def main():
     for name in names:
         outcome = run_one(name, mode, build_only)
         print(f'{name}: {outcome}', flush=True)
-        if build_only and outcome != 'passed':
-            log = build_dir(name, mode) / 'build.log'
-            if log.exists():
-                print(log.read_text()[-4000:], flush=True)
         failed |= outcome != 'passed' and not outcome.startswith('skipped')
     return 1 if failed else 0
 
