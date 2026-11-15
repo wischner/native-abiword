@@ -27,12 +27,26 @@ public:
     // Create the window; it stays hidden until shown.
     find_window(native::app_wnd &owner, document_canvas &target,
                 std::function<void(const std::string &)> report);
+    ~find_window() override;
+
+    // Reopen with focus on the search field.
+    void open();
+
+    // Restore search preferences without emitting user changes.
+    void set_options(edit::find_options options);
+
+    // Report immediately applied search preferences.
+    native::signal<edit::find_options> on_options_change;
 
 private:
     // Drives the window through Native's public input entry points.
     friend class ::desktop_test;
 
     void attach(native::wnd &child);
+    void build_layout();
+    void paint_labels(native::wnd_paint_event event);
+    native::rect constrain_bounds(const native::rect &bounds) const override;
+    void on_destroy_completed() override;
     edit::find_options options() const;
     void find();
     void replace();
@@ -47,6 +61,10 @@ private:
     native::button find_button_;
     native::button replace_button_;
     native::button all_button_;
+    native::button close_button_;
+    native::size minimum_;
+    int margin_ = 12;
+    int label_width_ = 0;
 };
 
 } // namespace ui

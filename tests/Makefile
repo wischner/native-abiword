@@ -28,12 +28,15 @@ $(UI_TEST): $(UI_SOURCES) $(wildcard $(ROOT)/tests/ui/*.h) $(UI_OBJ) $(LINK_LIBS
 	@echo "  TEST    $(notdir $@)"
 
 ui: $(UI_TEST)
-	SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software $(UI_TEST)
+	SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software sh $(ROOT)/tests/ui/run_desktop.sh $(UI_TEST)
+
+$(OBJDIR)/test_preferences: EXTRA_SOURCES = $(ROOT)/src/app/preferences.cpp
+$(OBJDIR)/test_preferences: $(ROOT)/src/app/preferences.cpp
 
 $(OBJDIR)/test_%: $(SRCDIR)/test_%.cpp $(LINK_LIBS)
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -I$(SRCDIR) -DFIXTURES='"$(ROOT)/tests/fixtures"' \
-	    -MMD -MP $< $(LINK_LIBS) $(LINK_LIBS) $(LDFLAGS) -o $@
+	    -MMD -MP $< $(EXTRA_SOURCES) $(LINK_LIBS) $(LINK_LIBS) $(LDFLAGS) -o $@
 	@echo "  TEST    $(notdir $@)"
 
 run: $(BINARIES)

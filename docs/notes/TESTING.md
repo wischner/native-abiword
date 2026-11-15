@@ -1,5 +1,55 @@
 # Testing
 
+## Dialog and persistence review (2026-11-15)
+
+The inventory and filesystem decisions are in
+[NATIVE-CHANGES.md](NATIVE-CHANGES.md#dialog-review-2026-11-15).
+
+`make test` runs six suites with ASan/UBSan: 411 checks passed, including
+39 preference checks and 19 file-publication checks. They cover missing
+configuration directories, XDG overrides and relative/empty fallback,
+invalid values, private permissions even with umask 000, unreadable files, unwritable directories,
+failed replacement, preservation of an existing document, unrelated `.tmp`
+files and symlink collisions. Permission tests run as the non-root Docker user.
+
+`make MODE=debug ui-test` builds the complete SDL desktop with sanitizers and
+runs three isolated processes. The first changes zoom and both search flags,
+uses the resulting search behaviour and saves formatted document data. The
+second restores the preferences, checks the displayed zoom and case/whole-word
+behaviour, then loads the saved paragraph/style/tab/page settings. The ordinary
+desktop scenario follows with a clean preference state. It checks all eight
+Find stops in both directions, wrapping, Enter-as-Tab, uncreated/hidden stops,
+reopening focus, native field heights, non-overlap and containment at normal,
+enlarged and undersized requested bounds. All three picker Cancel callbacks
+leave the document unchanged. A forced preference-save error reaches the
+status bar and stderr. The expected `Cannot create …preferences.conf`
+diagnostic in the test log is part of that negative test.
+
+`make ui-keyboard-test` adds real XTest keyboard/pointer events against the SDL
+application under Xvfb at 96 and 144 DPI (100% and 150%). It checks forward and
+reverse Find navigation, checkbox Space activation and persistence, keyboard
+Close, chooser Cancel, save-prompt Cancel selected with Tab, About dismissal,
+and Save As. The saved document must contain the physically typed tab between
+`a` and `b`. Screenshots of Find, Open, Save As, About, the confirmation and
+the document go to `build/dialog-screenshots/`. These captures were visually
+inspected: labels, fields, checkboxes, buttons and multiline text are visible
+without overlaps at both tested scales. The script uses X11/XTest, Xvfb, xrdb
+and ImageMagick already present in the existing SDL SDK image.
+
+The GEM/gemd and X11 Debug platform builds and desktop scenarios also passed.
+GEM retains 20-pixel toolbar bands and 18-pixel hosted fields, while its Find
+fields use the new 24-pixel form height. The Native compatibility patch was
+also applied twice to a pristine `426a42f` source snapshot to verify clean
+application and idempotence.
+
+Limits: these checks are automated plus screenshot inspection, not a manual
+session on the user's display. Insert Image and the three error-message uses
+were reviewed through their shared dialog implementation and application
+callbacks, rather than each receiving a separate screenshot. Other Native
+backends, extreme DPI/font overrides and non-Linux preference paths were not
+runtime-tested here. Atomic rename is tested for ordinary failures, not power
+loss. Tests use fresh temporary configuration, never the user's preferences.
+
 UI tests use Native and nothing else, so one test source covers every backend.
 
 | Layer | Runs | How |

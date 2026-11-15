@@ -9,6 +9,7 @@
 //
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -45,6 +46,62 @@ public:
         fs::remove(path_, ignored);
     }
 
+    // The shell runner starts a second process against the same config file.
+    void run_preferences(bool write) {
+        auto &finder = window_.find_;
+        window_.show_find();
+        if (write) {
+            window_.set_zoom(1.5625);
+            finder.match_case_.on_native_checked(true);
+            finder.whole_word_.on_native_checked(true);
+        }
+        CHECK(window_.canvas_.view().zoom() == 1.5625);
+        CHECK(finder.match_case_.get_checked());
+        CHECK(finder.whole_word_.get_checked());
+        CHECK(window_.zoom_box_.get_text() == "156%");
+        auto &view = canvas_.view();
+        view.insert_text(U"Cat cat scatter");
+        view.move_document_start(false);
+        finder.needle_.set_text("cat");
+        finder.find_button_.on_native_click();
+        CHECK(view.selection_text() == "cat");
+        finder.replacement_.set_text("dog");
+        finder.all_button_.on_native_click();
+        CHECK(canvas_.document().table().text_in(
+            0, canvas_.document().table().end_position()) == U"Cat dog scatter");
+        finder.close_button_.on_native_click();
+        window_.show_find();
+        CHECK(finder.match_case_.get_checked() && finder.whole_word_.get_checked());
+        finder.destroy();
+        const auto document_path = window_.preferences_path_.parent_path() / "test.abw";
+        if (write) {
+            view.set_block_style("Heading 1");
+            view.select_all();
+            view.set_char_format({{"font-size", "24pt"}, {"color", "c0392b"}});
+            view.set_block_format({{"text-align", "right"}, {"margin-left", "0.5in"},
+                                   {"tabstops", "1in/R0"}});
+            view.set_section_format({{"page-margin-left", "1.5in"}});
+            CHECK(window_.save_to(document_path));
+        } else {
+            window_.load(document_path);
+            auto &loaded = canvas_.view();
+            CHECK(loaded.zoom() == 1.5625);
+            loaded.move_document_start(false);
+            CHECK(loaded.char_property("font-size") == "24pt");
+            CHECK(loaded.char_property("color") == "c0392b");
+            CHECK(loaded.block_style() == "Heading 1");
+            CHECK(loaded.block_property("text-align") == "right");
+            CHECK(loaded.block_property("margin-left") == "0.5in");
+            CHECK(loaded.block_property("tabstops") == "1in/R0");
+            CHECK(loaded.layout().pages().front().margin_left == 2160);
+        }
+        if (!write) {
+            window_.set_zoom(1.0);
+            finder.match_case_.on_native_checked(false);
+            finder.whole_word_.on_native_checked(false);
+        }
+    }
+
     // Run everything that needs no fresh paint.
     void run_edits() {
         canvas_.stop_caret();
@@ -66,11 +123,20 @@ public:
         }
         save_new_document();
         test_typing();
+        // A document canvas opts out of form traversal and owns the Tab key.
+        CHECK(!canvas_.on_native_tab({key_code::tab, native::key_action::press,
+                                      false, key_modifiers::none}));
+        const auto before_tab = impexp::make_abw_exporter()->write(canvas_.document());
+        press(key_code::tab);
+        CHECK(impexp::make_abw_exporter()->write(canvas_.document()) != before_tab);
+        window_.run("undo");
+        CHECK(impexp::make_abw_exporter()->write(canvas_.document()) == before_tab);
         test_formatting_keys();
         test_undo();
         test_selection_and_clipboard();
         test_toolbar_and_menu();
         test_format_bar();
+        test_cancel_and_write_failure();
         test_mouse();
         test_rulers();
         test_find();
@@ -126,6 +192,26 @@ public:
     }
 
 private:
+    void test_cancel_and_write_failure() {
+        const auto before = impexp::make_abw_exporter()->write(canvas_.document());
+        const auto path = canvas_.document().path();
+        // These are the callbacks delivered by every Native picker on Cancel.
+        for (native::file_dialog *dialog : std::array<native::file_dialog *, 3>{
+                 &window_.open_dialog_, &window_.save_dialog_, &window_.image_dialog_})
+            dialog->on_modal_close.emit(native::dialog_result::cancelled);
+        CHECK(impexp::make_abw_exporter()->write(canvas_.document()) == before);
+        CHECK(canvas_.document().path() == path);
+        CHECK(!window_.open_dialog_.get_filters().empty());
+        CHECK(!window_.save_dialog_.get_filters().empty());
+        CHECK(!window_.image_dialog_.get_filters().empty());
+        const auto original = window_.preferences_path_;
+        window_.preferences_path_ = original / "impossible";
+        window_.set_zoom(1.25);
+        CHECK(window_.message_.starts_with("Preferences not saved:"));
+        window_.preferences_path_ = original;
+        window_.set_zoom(1.0);
+    }
+
     // Both rows use the backend band; hosted native fields must stay
     // inside it, including after shrinking and restoring the window.
     void test_toolbar_layout() {
@@ -445,6 +531,7 @@ private:
         menu("find");
         ui::find_window &finder = window_.find_;
         CHECK(finder.get_created());
+        test_find_layout();
         finder.needle_.set_text("hello");
         finder.replacement_.set_text("Howdy");
         finder.find_button_.on_native_click();
@@ -453,6 +540,73 @@ private:
         CHECK(file_has("Howdy world"));
         CHECK(!file_has("Hello world"));
         finder.destroy();
+    }
+
+    void test_find_layout() {
+        auto &finder = window_.find_;
+        const std::array<native::wnd *, 8> controls{
+            &finder.needle_, &finder.replacement_, &finder.match_case_,
+            &finder.whole_word_, &finder.find_button_, &finder.replace_button_,
+            &finder.all_button_, &finder.close_button_};
+        const auto check_layout = [&] {
+            const auto client = finder.get_client_bounds();
+            const auto appearance = native::theme::create(finder.get_gpx());
+            const int height = std::max(appearance->get_form_control_height(),
+                                        appearance->get_text_edit_height());
+            CHECK(finder.needle_.get_dimensions().h == height);
+            CHECK(finder.replacement_.get_dimensions().h == height);
+            CHECK(finder.needle_.get_bounds().x1() == finder.replacement_.get_bounds().x1());
+            for (std::size_t i = 0; i < controls.size(); ++i) {
+                CHECK(controls[i]->get_tab_order() == i + 1);
+                const auto bounds = controls[i]->get_bounds();
+                CHECK(bounds.x1() >= client.x1() && bounds.y1() >= client.y1());
+                CHECK(bounds.x2() <= client.x2() && bounds.y2() <= client.y2());
+                for (std::size_t j = i + 1; j < controls.size(); ++j) {
+                    const auto other = controls[j]->get_bounds();
+                    CHECK(bounds.x2() <= other.x1() || other.x2() <= bounds.x1() ||
+                          bounds.y2() <= other.y1() || other.y2() <= bounds.y1());
+                }
+            }
+        };
+        check_layout();
+        const auto original = finder.get_dimensions();
+        finder.set_dimensions({640, 300});
+        check_layout();
+        finder.set_dimensions({240, 100});
+        check_layout();
+        finder.set_dimensions(original);
+        check_layout();
+        // Inspect Native's shared focus target; input still uses public hooks.
+        const auto focused = [&] { return native::detail::input_target(finder); };
+        CHECK(focused() == &finder.needle_);
+        for (std::size_t i = 0; i < controls.size(); ++i) {
+            CHECK(controls[i]->on_native_key({key_code::tab,
+                native::key_action::press, false, key_modifiers::none}));
+            CHECK(focused() == controls[(i + 1) % controls.size()]);
+        }
+        for (std::size_t i = controls.size(); i > 0; --i) {
+            auto *origin = controls[i % controls.size()];
+            CHECK(origin->on_native_key({key_code::tab,
+                native::key_action::press, false, key_modifiers::shift}));
+            CHECK(focused() == controls[i - 1]);
+        }
+        finder.needle_.on_native_key({key_code::enter,
+            native::key_action::press, false, key_modifiers::none});
+        CHECK(focused() == &finder.replacement_);
+        finder.match_case_.destroy();
+        finder.replacement_.on_native_key({key_code::tab,
+            native::key_action::press, false, key_modifiers::none});
+        CHECK(focused() == &finder.whole_word_);
+        finder.match_case_.create(); // Created but hidden controls are skipped.
+        finder.replacement_.on_native_key({key_code::tab,
+            native::key_action::press, false, key_modifiers::none});
+        CHECK(focused() == &finder.whole_word_);
+        finder.match_case_.show();
+        finder.close_button_.on_native_click();
+        CHECK(!finder.get_created());
+        window_.show_find();
+        CHECK(focused() == &finder.needle_);
+        check_layout();
     }
 
     void test_page_break() {
@@ -565,7 +719,14 @@ private:
 
 } // namespace
 
-int program(int, char **) {
+int program(int argc, char **argv) {
+    // Platform runners also invoke this executable without the shell runner.
+    const char *shared = std::getenv("FYODOR_TEST_CONFIG");
+    std::string temporary = (fs::temp_directory_path() / "fyodor-desktop-XXXXXX").string();
+    const char *config = shared ? shared : mkdtemp(temporary.data());
+    if (!config) return 1;
+    setenv("XDG_CONFIG_HOME", config, 1);
+    const std::string mode = argc > 1 ? argv[1] : "";
     app::options settings;
     ui::main_window window(settings);
     desktop_test test(window);
@@ -578,6 +739,11 @@ int program(int, char **) {
         });
     window.on_wnd_create.connect([&] {
         native::app::post([&] {
+            if (mode == "--preferences-write" || mode == "--preferences-read") {
+                test.run_preferences(mode == "--preferences-write");
+                window.destroy();
+                return;
+            }
             test.run_edits();
             window.canvas_probe().invalidate();
             waiter.start();
@@ -586,5 +752,6 @@ int program(int, char **) {
     });
     const int status = native::app::run(window);
     waiter.stop();
+    if (!shared) fs::remove_all(temporary);
     return status ? status : testing::summary("desktop");
 }

@@ -22,6 +22,7 @@
 #include <native.h>
 
 #include "app/options.h"
+#include "app/preferences.h"
 #include "document_canvas.h"
 #include "find_window.h"
 #include "impexp/file_format.h"
@@ -73,8 +74,12 @@ private:
     void set_zoom(double zoom);
     void show_find();
     void show_about();
+    void load_preferences();
+    void save_preferences();
 
     app::options settings_;
+    app::preferences preferences_;
+    std::filesystem::path preferences_path_;
     font_catalog fonts_;
 
     native::combo_box style_box_;

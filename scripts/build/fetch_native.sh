@@ -12,6 +12,11 @@ if test ! -e "$dest/include/native.h"; then
     mkdir -p "$(dirname -- "$dest")"
     git clone --quiet --branch "$ref" "$url" "$dest" >&2
 elif test "${1:-}" = --update; then
+    # Remove only our known patch; git refuses conflicting user modifications.
+    patch="$root/scripts/build/native-dialogs.patch"
+    if git -C "$dest" apply --reverse --check "$patch" 2>/dev/null; then
+        git -C "$dest" apply --reverse "$patch"
+    fi
     git -C "$dest" fetch --quiet origin "$ref" >&2
     git -C "$dest" checkout --quiet --detach FETCH_HEAD >&2
 fi

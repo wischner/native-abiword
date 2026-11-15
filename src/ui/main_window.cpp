@@ -205,6 +205,12 @@ main_window::main_window(const app::options &settings)
     canvas_.set_change_handler([this] { update_state(); });
     canvas_.set_command_handler(
         [this](std::string_view command) { run(command); });
+    find_.on_options_change.connect([this](edit::find_options options) {
+        preferences_.match_case = options.match_case;
+        preferences_.whole_word = options.whole_word;
+        save_preferences();
+        return true;
+    });
 
     for (const impexp::file_format &format : impexp::file_formats())
         if (format.make_importer)
@@ -220,18 +226,20 @@ main_window::main_window(const app::options &settings)
     open_dialog_.on_modal_close.connect([this](native::dialog_result result) {
         if (result == native::dialog_result::accepted)
             load(open_dialog_.get_path());
+        canvas_.focus();
         return true;
     });
     save_dialog_.on_modal_close.connect([this](native::dialog_result result) {
         if (result == native::dialog_result::accepted)
             save_to(save_dialog_.get_path());
+        canvas_.focus();
         return true;
     });
     image_dialog_.on_modal_close.connect(
         [this](native::dialog_result result) {
-            if (result != native::dialog_result::accepted)
-                return true;
-            insert_image_requested();
+            if (result == native::dialog_result::accepted)
+                insert_image_requested();
+            canvas_.focus();
             return true;
         });
 
@@ -249,6 +257,7 @@ main_window::main_window(const app::options &settings)
         canvas_.start_caret(*this);
         if (settings_.file)
             load(*settings_.file);
+        load_preferences();
         canvas_.refresh();
         canvas_.focus();
         return true;

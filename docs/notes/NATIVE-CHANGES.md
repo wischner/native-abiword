@@ -1,5 +1,82 @@
 # Native changes made for fyodor
 
+## Dialog review (2026-11-15)
+
+The complete menu, toolbar and keyboard command inventory contains **nine
+dialog uses**. There are no separate settings, properties, import-options,
+export-options, directory-selection or advanced-search forms in this port.
+
+| Dialog | Layout owner | Review and changes |
+| --- | --- | --- |
+| Find and Replace | Fyodor | Rebuilt with Native grids, measured labels, theme field/check/button heights, content-derived minimum dimensions, resize constraints, eight ordered stops and initial/reopen focus. Close returns focus to the document. |
+| Open | Native | Filters/cancel callbacks reviewed; document focus restored; shared SDL chooser gets initial focus, traversal and button activation. |
+| Save As / export | Native | Suggested name, extension, format filters and cancel callbacks reviewed; same shared SDL keyboard fixes. |
+| Insert Image | Native | Image filters and cancellation reviewed; same chooser fixes and focus restoration. |
+| Save changes confirmation | Native | Shared SDL button traversal, focused activation and content-based message sizing. |
+| Could not open | Native | Same shared message-box improvements; diagnostics remain visible. |
+| Could not save | Native | Same message improvements; atomic-save failures include their reason. |
+| Could not insert | Native | Same shared message-box improvements. |
+| About Fyodor | Native | Shared SDL message wrapping preserves paragraphs and the complete description. |
+
+All nine were reviewed. One application-owned layout was rebuilt; the other
+eight uses receive shared SDL dialog corrections, with three application
+file-picker callbacks also restoring editing focus. The format toolbar and
+rulers were reviewed separately: formatting remains document data, toolbar
+fields retain Native's compact metrics, and the existing resize tests remain.
+
+The reference is Native `426a42f`, specifically `src/vision_edit_form.cpp`,
+`lib/native/input_geometry.cpp` and `lib/native/wnd_focus.cpp`. GEM separates
+24-pixel standalone form inputs from 18-pixel toolbar inputs. Native's sample
+explicitly orders controls, reads the theme after creation, excludes labels
+and focuses the first field whenever opened. Fyodor follows that contract,
+using the native grid manager and measured label widths rather than copying
+the sample's absolute coordinates.
+
+The review found additional dependency defects: opt-out document canvases lost
+Tab to the new traversal dispatcher, and SDL's private file-picker/message-box
+loops bypassed that dispatcher. SDL buttons/checks also lacked physical-key
+activation, and message boxes ellipsized multi-paragraph text. The checked-in
+`scripts/build/native-dialogs.patch` fixes these in Native's owning layers.
+`patch_native.sh` checks applicability before changing any files and is
+idempotent. CMake applies it to the selected Native checkout; an incompatible
+upstream update fails explicitly and needs review. These fixes have not been
+published upstream. The patch also updates Native's architecture, custom
+control audit and feature matrix with its consumer-specific scope.
+
+The three application preferences (zoom and the two search flags) previously
+had no persistence. They now load before the first refresh, validate values,
+save immediately and affect the actual view/search behaviour after restart.
+There is no preferences dialog and no uncommitted settings transaction.
+Cancel on the three file pickers leaves the document unchanged. Document
+formatting continues through the existing AbiWord serializer.
+
+Linux configuration is `$XDG_CONFIG_HOME/fyodor/preferences.conf`, with the
+standard `$HOME/.config` fallback. Relative XDG values are ignored, following
+the [XDG specification](https://specifications.freedesktop.org/basedir/latest/).
+Precedence is built-in defaults followed by the user file; this application
+has no system-wide preference schema or command-line preference overrides.
+There are no legacy settings files to migrate. macOS uses Application Support
+when XDG_CONFIG_HOME is absent; Windows resolves APPDATA. Non-Linux runtime
+behaviour was not validated in this review.
+
+The common file writer stages in a unique private directory on the destination
+filesystem, then renames. This replaces the unsafe predictable `document.tmp`
+name, preserves existing document permissions and protects preferences with
+0600. New configuration directories use 0700 without changing existing parent
+permissions. Errors are reported rather than redirected to another location.
+Atomic replacement protects against partial writes, but does not promise
+power-loss durability (no fsync). Windows replacement semantics remain
+unverified. User documents are not relocated into XDG storage.
+
+Runtime diagnostics use stderr; Fyodor has no persistent log, cache, runtime
+socket or additional application-data store. Build/test logs and screenshots
+remain under ignored `build/`; developer session wrappers use temporary
+directories with cleanup. No desktop writes to `/etc`, `/var`, or installation
+directories were introduced. Log rotation and legacy migration are therefore
+not applicable.
+
+Validation commands and their limits are recorded in [TESTING.md](TESTING.md).
+
 These extend [Native](https://github.com/wischner/native) on its
 `master` branch, which includes the former `fyodor-native-extensions` branch.
 A contract added to Native has to work on

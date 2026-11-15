@@ -30,6 +30,14 @@ your desktop through its X11 socket.
 `make update-native` moves it to the branch's newest commit. To build against
 your own checkout, pass `NATIVE_ROOT=/path/to/native`.
 
+Native commit `426a42f` or newer is required for form sizing and explicit tab
+order. Configuration applies the reviewed compatibility patch in
+`scripts/build/native-dialogs.patch` to the selected Native source tree. It
+preserves document Tab input and fixes SDL dialog keyboard handling and
+message wrapping. Already applied patches are detected; conflicting source
+changes stop configuration instead of being overwritten. `make update-native`
+removes this known patch before updating; the next build reapplies it.
+
 **VS Code F5** builds and debugs the selected backend. Profiles are named
 `<name>, <env>`: `SDL2, Local`, `X11, Xephyr`, `GEM, Rasta` and so on.
 
@@ -67,12 +75,32 @@ Native's SDL2 backend; `make platform-test` builds the others. See
 ```sh
 make test                    # unit tests under ASan and UBSan, no display
 make ui-test                 # the real window, through Native's input hooks
+make ui-keyboard-test        # real SDL/X11 events and captures at 100%/150%
 make platform-test           # every backend SDK; PLATFORM=linux-x11 for one
 make list-platforms
 ```
 
 See [testing](docs/notes/TESTING.md). Tests run in Docker, so ASan works even
 on hosts that preload a security agent; see [that note](docs/notes/HOST-ASAN.md).
+
+## Preferences and files
+
+Zoom, Match case and Whole word are applied and saved immediately. Closing
+Find and Replace keeps these choices; it has no pending Apply/Cancel state.
+Search and replacement text remain in memory only. On Linux, preferences use
+`$XDG_CONFIG_HOME/fyodor/preferences.conf`, or
+`~/.config/fyodor/preferences.conf` when XDG_CONFIG_HOME is unset, empty or
+relative. New directories are private (0700), and preferences are 0600.
+Failures appear in the status bar and on stderr. There was no older Fyodor
+preferences file to migrate. No system configuration or persistent log/cache
+files are created.
+
+Formatting and page settings belong to the document and persist through Save
+in `.abw`/`.awt`; text/HTML exports retain their existing limitations. Documents
+stay at user-selected paths. Saves use a unique private staging directory
+beside the destination and rename the completed file into place. Existing
+document permissions are preserved; new files are private. A failed write
+leaves the original intact and reports the destination and reason.
 
 ## Desktop icon
 

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <iostream>
 
 #include "edit/commands.h"
 #include "impexp/file_format.h"
@@ -141,6 +142,7 @@ bool main_window::run_window_command(std::string_view command) {
     } else if (command == "insertImage") {
         image_dialog_.create();
         image_dialog_.show();
+        canvas_.focus();
     } else if (command == "zoomIn") {
         set_zoom(canvas_.view().zoom() * 1.25);
     } else if (command == "zoomOut") {
@@ -187,6 +189,7 @@ void main_window::open_requested() {
         return;
     open_dialog_.create();
     open_dialog_.show();
+    canvas_.focus();
 }
 
 void main_window::load(const std::filesystem::path &path) {
@@ -236,6 +239,7 @@ void main_window::save_as_requested() {
         path.empty() ? "Untitled.abw" : path.filename().string());
     save_dialog_.create();
     save_dialog_.show();
+    canvas_.focus();
 }
 
 void main_window::insert_image_requested() {
@@ -281,12 +285,35 @@ void main_window::paste() {
 void main_window::set_zoom(double zoom) {
     canvas_.view().set_zoom(zoom);
     canvas_.refresh();
+    if (preferences_.zoom != canvas_.view().zoom()) {
+        preferences_.zoom = canvas_.view().zoom();
+        save_preferences();
+    }
+}
+
+void main_window::load_preferences() {
+    std::string error;
+    preferences_path_ = app::preferences_path(error);
+    if (!preferences_path_.empty())
+        preferences_ = app::load_preferences(preferences_path_, error);
+    canvas_.view().set_zoom(preferences_.zoom);
+    find_.set_options({preferences_.match_case, preferences_.whole_word});
+    if (!error.empty()) {
+        std::cerr << "fyodor: " << error << '\n';
+        set_message(error);
+    }
+}
+
+void main_window::save_preferences() {
+    std::string error;
+    if (!app::save_preferences(preferences_path_, preferences_, error)) {
+        std::cerr << "fyodor: " << error << '\n';
+        set_message("Preferences not saved: " + error);
+    }
 }
 
 void main_window::show_find() {
-    if (!find_.get_created())
-        find_.create();
-    find_.show();
+    find_.open();
 }
 
 void main_window::show_about() {

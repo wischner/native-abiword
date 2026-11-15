@@ -44,9 +44,9 @@ export LINK_LIBS TARGET HEADLESS_TARGET
 export NATIVE_ROOT NATIVE_ARCHIVE NATIVE_LDLIBS SUFFIX NATIVE_CHECKS
 export NATIVE_RC
 
-.PHONY: all release debug libs app native headless resources test docker-test run-tests run clean ui-test platform-test list-platforms update-native $(LIB_NAMES)
+.PHONY: all release debug libs app native headless resources test docker-test run-tests run clean ui-test ui-keyboard-test platform-test list-platforms update-native $(LIB_NAMES)
 CONTAINER_GOALS := all release debug libs app native headless resources test \
-    run-tests ui-test $(LIB_NAMES)
+    run-tests ui-test ui-keyboard-test $(LIB_NAMES)
 DOCKER_RUN = docker run --rm --init -u $$(id -u):$$(id -g) -e HOME=/tmp \
     -e FYODOR_IN_DOCKER=1 -v "$(ROOT):$(ROOT)" \
     $(if $(filter $(ROOT)/%,$(NATIVE_ROOT)),,-v "$(NATIVE_ROOT):$(NATIVE_ROOT)") \
@@ -88,6 +88,9 @@ run-tests: libs
 	+flock "$(OBJROOT)/tests.lock" $(MAKE) --no-print-directory -C tests run
 ui-test: app
 	+flock "$(OBJROOT)/tests.lock" $(MAKE) --no-print-directory -C tests ui
+ui-keyboard-test: app
+	FYODOR_TEST_DPI=96 xvfb-run -a -s '-screen 0 1600x1200x24' python3 -B tests/ui/test_dialog_keyboard.py $(TARGET)
+	FYODOR_TEST_DPI=144 xvfb-run -a -s '-screen 0 1600x1200x24' python3 -B tests/ui/test_dialog_keyboard.py $(TARGET)
 endif
 
 # Host-side goals.

@@ -1,0 +1,333 @@
+diff --git a/docs/manuals/book-of-native/FEATURE-MATRIX.md b/docs/manuals/book-of-native/FEATURE-MATRIX.md
+index 58441d2..80d4e7d 100644
+--- a/docs/manuals/book-of-native/FEATURE-MATRIX.md
++++ b/docs/manuals/book-of-native/FEATURE-MATRIX.md
+@@ -2042,3 +2042,16 @@ both default page lifecycles and the opt-in model, mode-change rejection, disabl
+ items, overflow, activation and creation without external page ownership.
+ Isaac's GEM desktop suite exercises the selector, double-click rename and undo.
+ Non-Linux native-peer runtime behavior still needs its platform acceptance run.
++
++## Fyodor compatibility fixes (2026-11-15)
++
++Opt-out canvases retain their own Tab editing commands; positive tab orders
++still opt a canvas into form traversal. SDL's existing custom file chooser
++and message box now register explicit stops, focus an initial control and
++dispatch Tab/Shift+Tab plus focused button activation in their modal loops.
++Hidden location fields have order zero. No control-kind classifications change.
++Fyodor's integration tests exercise document Tab and form traversal; these
++consumer-carried fixes do not establish new cross-platform runtime coverage.
++
++SDL's existing custom buttons accept Space/Enter and checkboxes accept Space
++from focused physical-key dispatch. SDL message text uses multiline drawing.
+diff --git a/docs/notes/CUSTOM.md b/docs/notes/CUSTOM.md
+index 816561a..d6f114d 100644
+--- a/docs/notes/CUSTOM.md
++++ b/docs/notes/CUSTOM.md
+@@ -1152,3 +1152,16 @@ above. The optional `selection_only` model uses the same peers/drawing stages
+ and needs no application page windows. No new control or painter was added.
+ `tab_strip` remains **C** for API compatibility; new external-content selectors
+ should use the optional `tab_view` mode. Isaac has migrated to that path.
++
++## Fyodor compatibility fixes (2026-11-15)
++
++Opt-out canvases retain their own Tab editing commands; positive tab orders
++still opt a canvas into form traversal. SDL's existing custom file chooser
++and message box now register explicit stops, focus an initial control and
++dispatch Tab/Shift+Tab plus focused button activation in their modal loops.
++Hidden location fields have order zero. No control-kind classifications change.
++Fyodor's integration tests exercise document Tab and form traversal; these
++consumer-carried fixes do not establish new cross-platform runtime coverage.
++
++SDL's existing custom buttons accept Space/Enter and checkboxes accept Space
++from focused physical-key dispatch. SDL message text uses multiline drawing.
+diff --git a/docs/standards/ARCHITECTURE.md b/docs/standards/ARCHITECTURE.md
+index 8ff8cc9..a1dae2b 100644
+--- a/docs/standards/ARCHITECTURE.md
++++ b/docs/standards/ARCHITECTURE.md
+@@ -2201,3 +2201,13 @@ an enabled item before emitting `on_activate`; double-clicking a selection-only
+ tab can invoke a consumer action such as renaming a sheet. Ordinary tab behavior
+ is unchanged. Keep the legacy `tab_strip` API for compatibility; new selectors
+ should use this mode instead of duplicating its tab painter.
++
++## Fyodor compatibility fixes (2026-11-15)
++
++Opt-out canvases retain their own Tab editing commands; positive tab orders
++still opt a canvas into form traversal. SDL's existing custom file chooser
++and message box now register explicit stops, focus an initial control and
++dispatch Tab/Shift+Tab plus focused button activation in their modal loops.
++Hidden location fields have order zero. No control-kind classifications change.
++Fyodor's integration tests exercise document Tab and form traversal; these
++consumer-carried fixes do not establish new cross-platform runtime coverage.
+diff --git a/lib/native/toolkits/sdl2/app.cpp b/lib/native/toolkits/sdl2/app.cpp
+index 01a688b..9756f9a 100644
+--- a/lib/native/toolkits/sdl2/app.cpp
++++ b/lib/native/toolkits/sdl2/app.cpp
+@@ -262,6 +262,20 @@ namespace native
+                         target->on_native_key(physical);
+                         break;
+                     }
++                    if ((mods & (key_modifiers::ctrl | key_modifiers::alt |
++                                 key_modifiers::meta)) == key_modifiers::none) {
++                        if (auto *button = dynamic_cast<native::button *>(target);
++                            button && (code == key_code::space || code == key_code::enter ||
++                                       code == key_code::keypad_enter)) {
++                            if (!physical.repeat) button->on_native_click();
++                            break;
++                        }
++                        if (auto *check = dynamic_cast<native::check *>(target);
++                            check && code == key_code::space) {
++                            if (!physical.repeat) check->on_native_checked(!check->get_checked());
++                            break;
++                        }
++                    }
+                     if (linux::sdl2::handle_completion_key(wnd,
+                                                            event.key) ||
+                         linux::sdl2::handle_combo_key(wnd, event.key) ||
+diff --git a/lib/native/toolkits/sdl2/file_browser.cpp b/lib/native/toolkits/sdl2/file_browser.cpp
+index a0a127d..4a0f337 100644
+--- a/lib/native/toolkits/sdl2/file_browser.cpp
++++ b/lib/native/toolkits/sdl2/file_browser.cpp
+@@ -14,6 +14,7 @@
+ #include <native/font.h>
+ 
+ #include "globals.h"
++#include "../../input_state.h"
+ #include "scale.h"
+ 
+ namespace linux::sdl2
+@@ -102,6 +103,12 @@ namespace linux::sdl2
+                 native::scrollbar_policy::never)
+             .set_type_search_enabled(true);
+         build_places();
++        unsigned order = 1;
++        for (auto *control : controls()) control->set_tab_order(order++);
++        _breadcrumbs.set_tab_order(0);
++        _location.set_tab_order(0); // Hidden until Ctrl+L or a breadcrumb click.
++        _location.set_enter_as_tab(false);
++        _name.set_enter_as_tab(false);
+         choose_initial_directory();
+         connect_events();
+         layout(_window.get_dimensions());
+@@ -116,6 +123,8 @@ namespace linux::sdl2
+             control->show();
+         }
+         _window.show();
++        (_save ? static_cast<native::wnd *>(&_name)
++               : static_cast<native::wnd *>(&_entries))->focus();
+         run_loop();
+         paths = _paths;
+         return !_paths.empty();
+@@ -255,6 +264,7 @@ namespace linux::sdl2
+ 
+     void file_browser::show_location_editor(int pointer_x) {
+         _editing_location = true;
++        _location.set_tab_order(5);
+         layout(_window.get_dimensions());
+         if (!_window.get_created())
+             return;
+@@ -273,6 +283,7 @@ namespace linux::sdl2
+ 
+     void file_browser::hide_location_editor() {
+         _editing_location = false;
++        _location.set_tab_order(0);
+         if (auto *state = text_edit_bindings.object_from_handle(&_location))
+             state->focused = false;
+         _location.set_bounds(native::rect(0, 0, 0, 0));
+@@ -347,7 +358,24 @@ namespace linux::sdl2
+ 
+     void file_browser::dispatch(const SDL_Event &event) {
+         switch (event.type) {
+-        case SDL_KEYDOWN:
++        case SDL_KEYDOWN: {
++            auto *focused = native::detail::input_target(_window);
++            if (!focused) focused = &_window;
++            if (event.key.keysym.sym == SDLK_TAB &&
++                !(event.key.keysym.mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI))) {
++                focused->on_native_tab({native::key_code::tab,
++                    native::key_action::press, event.key.repeat != 0,
++                    (event.key.keysym.mod & KMOD_SHIFT) ? native::key_modifiers::shift
++                                                      : native::key_modifiers::none});
++                break;
++            }
++            if (auto *button = dynamic_cast<native::button *>(focused);
++                button && (event.key.keysym.sym == SDLK_SPACE ||
++                           event.key.keysym.sym == SDLK_RETURN ||
++                           event.key.keysym.sym == SDLK_KP_ENTER)) {
++                if (!event.key.repeat) button->on_native_click();
++                break;
++            }
+             if ((event.key.keysym.mod & KMOD_CTRL) != 0 &&
+                 event.key.keysym.sym == SDLK_l) {
+                 show_location_editor();
+@@ -372,6 +400,7 @@ namespace linux::sdl2
+                 handle_text_edit_key(&_window, event.key);
+             }
+             break;
++        }
+         case SDL_TEXTINPUT:
+             handle_text_edit_input(&_window, event.text.text);
+             break;
+diff --git a/lib/native/toolkits/sdl2/message_box.cpp b/lib/native/toolkits/sdl2/message_box.cpp
+index 4b8ef08..3c61e2a 100644
+--- a/lib/native/toolkits/sdl2/message_box.cpp
++++ b/lib/native/toolkits/sdl2/message_box.cpp
+@@ -20,12 +20,43 @@
+ #include <native/modal_wnd.h>
+ 
+ #include "../../message_box_common.h"
++#include "../../input_state.h"
+ #include "../../message_box_icons.h"
+ #include "globals.h"
+ #include "scale.h"
+ 
+ namespace
+ {
++    // Preserve paragraphs and wrap long diagnostics at UTF-8 boundaries.
++    std::vector<std::string> message_lines(const std::string &message,
++                                            const native::font_t &font,
++                                            int width) {
++        std::vector<std::string> lines(1);
++        for (std::size_t offset = 0; offset < message.size();) {
++            if (message[offset] == '\n') {
++                lines.emplace_back();
++                ++offset;
++                continue;
++            }
++            const auto start = offset++;
++            while (offset < message.size() &&
++                   (static_cast<unsigned char>(message[offset]) & 0xc0) == 0x80)
++                ++offset;
++            auto &line = lines.back();
++            const auto previous = line.size();
++            line.append(message, start, offset - start);
++            if (previous && font.measure_text(line).width > width) {
++                const auto space = line.find_last_of(' ');
++                const auto split = space != std::string::npos && space > 0
++                    ? space : previous;
++                auto remainder = line.substr(split + (split == space ? 1 : 0));
++                line.resize(split);
++                lines.push_back(std::move(remainder));
++            }
++        }
++        return lines;
++    }
++
+     // Process events for a synchronous library-owned SDL modal window.
+     void run_modal_loop(native::modal_wnd &dialog,
+                         const std::function<void()> &accept,
+@@ -50,14 +81,28 @@ namespace
+                     continue;
+ 
+                 switch (event.type) {
+-                case SDL_KEYDOWN:
++                case SDL_KEYDOWN: {
++                    auto *focused = native::detail::input_target(dialog);
++                    if (!focused) focused = &dialog;
++                    if (event.key.keysym.sym == SDLK_TAB &&
++                        !(event.key.keysym.mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI))) {
++                        focused->on_native_tab({native::key_code::tab,
++                            native::key_action::press, event.key.repeat != 0,
++                            (event.key.keysym.mod & KMOD_SHIFT) ? native::key_modifiers::shift
++                                                              : native::key_modifiers::none});
++                        break;
++                    }
+                     if (event.key.keysym.sym == SDLK_ESCAPE) {
+                         cancel();
+                     } else if (event.key.keysym.sym == SDLK_RETURN ||
+-                               event.key.keysym.sym == SDLK_KP_ENTER) {
+-                        accept();
++                               event.key.keysym.sym == SDLK_KP_ENTER ||
++                               event.key.keysym.sym == SDLK_SPACE) {
++                        if (auto *button = dynamic_cast<native::button *>(focused)) {
++                            if (!event.key.repeat) button->on_native_click();
++                        } else accept();
+                     }
+                     break;
++                }
+ 
+                 case SDL_MOUSEMOTION:
+                     linux::sdl2::update_mouse_cursor(
+@@ -138,7 +183,11 @@ namespace native
+         const bool has_icon = icon != message_box_icon::none;
+         const int width = std::clamp(
+             measured + (has_icon ? 122 : 64), 380, 640);
+-        constexpr int height = 170;
++        const int message_left = has_icon ? 88 : 24;
++        const auto lines = message_lines(message, font, width - message_left - 24);
++        const int line_height = std::max(1, font.measure_text("Mg").height) + 2;
++        const int message_height = std::max(82, int(lines.size()) * line_height);
++        const int height = message_height + 88;
+         const int count = detail::message_box_button_count(buttons);
+ 
+         modal_wnd dialog(
+@@ -154,6 +203,7 @@ namespace native
+             controls.push_back(std::make_unique<button>(
+                 detail::message_box_button_label(buttons, index),
+                 0, 0, 92, 30));
++            controls.back()->set_tab_order(index + 1);
+             controls.back()->on_click.connect([&, index] {
+                 result = detail::message_box_result_for_button(
+                     buttons, index);
+@@ -189,23 +239,17 @@ namespace native
+             if (has_icon) {
+                 event.g.draw_img(
+                     detail::message_box_icon_image(icon),
+-                    point(26, 38));
++                    point(26, 22 + (message_height - 32) / 2));
++            }
++            event.g.set_font(font).set_ink(rgba(24, 24, 24, 255));
++            int y = 22 + (message_height - int(lines.size()) * line_height) / 2;
++            for (const auto &line : lines) {
++                event.g.draw_text(line, rect(message_left, y,
++                    width - message_left - 24, line_height),
++                    {text_align::center, text_valign::center,
++                     text_overflow::clip, true});
++                y += line_height;
+             }
+-            const int message_left = has_icon ? 88 : 24;
+-            event.g.set_font(font)
+-                .set_ink(rgba(24, 24, 24, 255))
+-                .draw_text(
+-                    message,
+-                    rect(static_cast<coord>(message_left), 22,
+-                         static_cast<dim>(std::max(
+-                             0, static_cast<int>(
+-                                    dialog.get_dimensions().w) -
+-                                    message_left - 24)),
+-                         82),
+-                    {text_align::center,
+-                     text_valign::center,
+-                     text_overflow::ellipsis,
+-                     true});
+             return true;
+         });
+ 
+@@ -217,6 +261,7 @@ namespace native
+             control->show();
+         }
+         dialog.show();
++        if (!controls.empty()) controls.front()->focus();
+ 
+         const auto accept = [&] {
+             if (!controls.empty())
+diff --git a/lib/native/wnd_focus.cpp b/lib/native/wnd_focus.cpp
+index 2bcbbac..dd35ffb 100644
+--- a/lib/native/wnd_focus.cpp
++++ b/lib/native/wnd_focus.cpp
+@@ -8,6 +8,7 @@
+ 
+ #include <native/wnd.h>
+ #include <native/app_wnd.h>
++#include <native/canvas.h>
+ #include <native/text_edit.h>
+ #include <native/tab_view.h>
+ #include "input_state.h"
+@@ -45,6 +46,8 @@ namespace native
+         if ((event.modifiers & (key_modifiers::ctrl | key_modifiers::alt |
+                                 key_modifiers::meta)) != key_modifiers::none)
+             return false;
++        // An opt-out canvas owns editing keys (for example document tabs).
++        if (dynamic_cast<canvas *>(this) && !get_tab_order()) return false;
+         bool traverse = event.key == key_code::tab;
+         if (event.key == key_code::enter || event.key == key_code::keypad_enter) {
+             const auto *editor = dynamic_cast<const text_edit *>(this);

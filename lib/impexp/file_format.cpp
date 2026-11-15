@@ -10,6 +10,7 @@
 //
 
 #include "impexp/file_format.h"
+#include "util/file.h"
 
 #include <algorithm>
 #include <array>
@@ -83,27 +84,7 @@ bool save_file(const std::filesystem::path &path,
         return false;
     }
     const std::string bytes = format->make_exporter()->write(source);
-    std::filesystem::path temporary = path;
-    temporary += ".tmp";
-    {
-        std::ofstream stream(temporary,
-                             std::ios::binary | std::ios::trunc);
-        stream.write(bytes.data(),
-                     static_cast<std::streamsize>(bytes.size()));
-        stream.close();
-        if (!stream) {
-            error = "cannot write " + temporary.string();
-            return false;
-        }
-    }
-    std::error_code failure;
-    std::filesystem::rename(temporary, path, failure);
-    if (failure) {
-        std::filesystem::remove(temporary, failure);
-        error = "cannot replace " + path.string();
-        return false;
-    }
-    return true;
+    return util::write_file_atomic(path, bytes, error);
 }
 
 std::string base64_encode(const std::vector<std::uint8_t> &bytes) {

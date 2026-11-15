@@ -114,9 +114,11 @@ document_canvas::~document_canvas() {
 }
 
 void document_canvas::open(std::unique_ptr<doc::document> source) {
+    const double zoom = view_ ? view_->zoom() : 1.0;
     view_.reset();
     document_ = std::move(source);
     view_ = std::make_unique<edit::view>(*document_, fonts_);
+    view_->set_zoom(zoom);
     images_.clear();
     set_scroll_position({0, 0});
     refresh();
