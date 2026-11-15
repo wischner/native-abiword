@@ -4,6 +4,10 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 native_root=$1
 patch="$root/scripts/build/native-dialogs.patch"
+if ! command -v git >/dev/null 2>&1; then
+    echo 'Native compatibility checks require Git; install git in the build environment.' >&2
+    exit 1
+fi
 # Native integrated these fixes with its own implementation and documentation.
 # The old patch cannot apply (or reverse) there; leave upstream sources intact.
 upstream_fix=75cdcd488ac5baa2ab6bc426f4f9d498a11a2909

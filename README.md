@@ -39,6 +39,8 @@ message wrapping. Already applied patches are detected; conflicting source
 changes stop configuration instead of being overwritten. `make update-native`
 removes this known patch before updating; the next build applies it only if
 the selected revision still needs it.
+These checks require Git in the build environment. The Windows platform build
+automatically adds it in a Fyodor SDK layer on top of Native's WinUI image.
 
 **VS Code F5** builds and debugs the selected backend. Profiles are named
 `<name>, <env>`: `SDL2, Local`, `X11, Xephyr`, `GEM, Rasta` and so on.

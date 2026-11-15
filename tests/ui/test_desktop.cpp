@@ -722,10 +722,24 @@ private:
 int program(int argc, char **argv) {
     // Platform runners also invoke this executable without the shell runner.
     const char *shared = std::getenv("FYODOR_TEST_CONFIG");
+#ifdef _WIN32
+    const std::string temporary = (fs::temp_directory_path() /
+        ("fyodor-desktop-" + std::to_string(getpid()) + "-" +
+         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()))).string();
+    if (!shared && !fs::create_directory(temporary)) return 1;
+    const char *config = shared ? shared : temporary.c_str();
+    // Windows preferences use APPDATA; XDG_CONFIG_HOME only affects Unix.
+    const int config_status = _putenv_s("APPDATA", config);
+#else
     std::string temporary = (fs::temp_directory_path() / "fyodor-desktop-XXXXXX").string();
     const char *config = shared ? shared : mkdtemp(temporary.data());
     if (!config) return 1;
-    setenv("XDG_CONFIG_HOME", config, 1);
+    const int config_status = setenv("XDG_CONFIG_HOME", config, 1);
+#endif
+    if (config_status != 0) {
+        if (!shared) fs::remove_all(temporary);
+        return 1;
+    }
     const std::string mode = argc > 1 ? argv[1] : "";
     app::options settings;
     ui::main_window window(settings);

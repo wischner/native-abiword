@@ -206,12 +206,16 @@
         }
     },
     "windows": {
-        "image": "native-windows-winui-sdk:24.04",
+        "image": "fyodor-windows-winui-sdk:24.04",
         "cmake": [
             "-DCMAKE_TOOLCHAIN_FILE={native}/scripts/cmake/toolchain-mingw.cmake"
         ],
         "suffix": ".exe",
-        "dockerfile": "{native}/scripts/windows/winui",
+        "dockerfile": "{root}/scripts/build/windows",
+        "base": {
+            "image": "native-windows-winui-sdk:24.04",
+            "dockerfile": "{native}/scripts/windows/winui"
+        },
         "package": {
             "title": "Windows",
             "requires": [

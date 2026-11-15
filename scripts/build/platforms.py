@@ -26,14 +26,16 @@ def build_dir(name, mode):
 
 
 def ensure_image(spec):
-    """Build an SDK image that is not on Docker Hub from Native's Dockerfile."""
+    """Build a local SDK image, including its base image when specified."""
     if 'dockerfile' not in spec or 'image' not in spec:
         return True
     image = spec['image']
     if subprocess.run(['docker', 'image', 'inspect', image],
                       capture_output=True).returncode == 0:
         return True
-    context = spec['dockerfile'].format(native=NATIVE)
+    if 'base' in spec and not ensure_image(spec['base']):
+        return False
+    context = spec['dockerfile'].format(native=NATIVE, root=ROOT)
     return subprocess.run(['docker', 'build', '-t', image, context]
                           ).returncode == 0
 
