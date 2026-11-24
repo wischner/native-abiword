@@ -1,5 +1,19 @@
 # Testing
 
+## OPEN LOOK popup separator spacing (2026-11-24)
+
+Builds and F5 now share `native-openlook-sdk:1`, automatically built from
+Native's OPEN LOOK Docker context when absent. Its XView patch makes blank
+popup separators half an OLGX button high, matching olwm desktop menus.
+Sizing, repaint offsets and pointer hit testing use the same row geometry.
+
+The Debug build against the cached Native dependency passed 1117/1117 desktop
+checks. Native's existing `native_openlook_runtime_tests --desktop-controls`
+executable from the sibling checkout also passed under Xvfb/olwm in this SDK;
+it checks command and toggle menu gap heights, blank repainting, reopening,
+and pointer/keyboard navigation across separators. Restart an existing F5
+session to load the patched XView library.
+
 ## OPEN LOOK desktop review (2026-11-24)
 
 Native backend repairs live in the sibling `../native` repository, with no

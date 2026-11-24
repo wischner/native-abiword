@@ -30,12 +30,14 @@ your desktop through its X11 socket.
 `make update-native` moves it to the branch's newest commit. To build against
 your own checkout, pass `NATIVE_ROOT=/path/to/native`.
 
-OPEN LOOK builds and F5 sessions use SDK `1.4.0`, containing OpenLook `v0.5.0`.
-To refresh Native and the SDK, then rebuild and test the Debug application:
+OPEN LOOK builds and F5 sessions use `native-openlook-sdk:1`, built automatically
+from Native's `scripts/linux/openlook` Docker context when absent. It extends
+SDK `1.4.0` (OpenLook `v0.5.0`) with XView popup separator spacing that matches
+the desktop menu's blank half-button gaps. To refresh Native, then rebuild
+and test the Debug application:
 
 ```sh
 make update-native
-docker pull wischner/gcc-x86_64-linux-openlook:1.4.0
 python3 -B scripts/build/platforms.py linux-openlook --mode debug
 ```
 
@@ -45,7 +47,7 @@ Until those changes are available in the cached dependency, test them with
 `NATIVE_ROOT="$PWD/../native" python3 -B scripts/build/platforms.py linux-openlook --mode debug`.
 The cached Git dependency remains the default, including for F5.
 Toolbar groups use whitespace, hosted combos are centered, and native menu
-groups have blank separator rows. Find and Replace opens over its owner;
+groups have blank half-button separator rows. Find and Replace opens over its owner;
 Tab/Shift+Tab visits every control, Enter runs Find from a field or checkbox,
 and Enter on a button runs that button's action.
 
