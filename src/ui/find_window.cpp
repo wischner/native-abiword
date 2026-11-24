@@ -23,11 +23,29 @@ find_window::find_window(native::app_wnd &owner, document_canvas &target,
       match_case_("Match case"), whole_word_("Whole word"),
       find_button_("Find"), replace_button_("Replace"),
       all_button_("Replace All"), close_button_("Close") {
+    needle_.set_enter_as_tab(false);
+    replacement_.set_enter_as_tab(false);
     unsigned order = 1;
     for (auto *control : std::array<native::wnd *, 8>{
              &needle_, &replacement_, &match_case_, &whole_word_,
-             &find_button_, &replace_button_, &all_button_, &close_button_})
+             &find_button_, &replace_button_, &all_button_, &close_button_}) {
         control->set_tab_order(order++);
+        control->on_key.connect([this, control](native::key_event event) {
+            if ((event.key != native::key_code::enter &&
+                 event.key != native::key_code::keypad_enter) ||
+                (event.modifiers & (native::key_modifiers::ctrl |
+                    native::key_modifiers::alt | native::key_modifiers::meta)) !=
+                    native::key_modifiers::none)
+                return false;
+            if (event.action == native::key_action::press && !event.repeat) {
+                if (auto *button = dynamic_cast<native::button *>(control))
+                    button->on_native_click();
+                else
+                    find_button_.on_native_click();
+            }
+            return true;
+        });
+    }
     on_wnd_create.connect([this] {
         build_layout();
         attach(needle_);
@@ -80,6 +98,14 @@ void find_window::on_destroy_completed() {
 void find_window::open() {
     if (!get_created())
         create();
+    if (const auto *owner = get_owner()) {
+        const auto bounds = owner->get_bounds();
+        const auto dimensions = get_dimensions();
+        set_position({static_cast<native::coord>(
+                          bounds.x1() + (int(bounds.w()) - int(dimensions.w)) / 2),
+                      static_cast<native::coord>(
+                          bounds.y1() + (int(bounds.h()) - int(dimensions.h)) / 2)});
+    }
     show();
     needle_.focus();
 }

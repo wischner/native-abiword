@@ -1,5 +1,33 @@
 # Testing
 
+## OPEN LOOK desktop review (2026-11-24)
+
+Native backend repairs live in the sibling `../native` repository, with no
+new consumer compatibility patch. The cached dependency remains the default.
+`NATIVE_ROOT="$PWD/../native" python3 -B scripts/build/platforms.py linux-openlook --mode debug` rebuilds
+Fyodor and runs its desktop checks with SDK 1.4.0. The checks cover the gap
+before zoom, hosted-control layout, centered Find bounds and Enter actions.
+Open Look and SDL Debug builds each passed 1117/1117 desktop checks against
+the sibling checkout. The SDL physical keyboard suite also passed at 96 DPI.
+
+`tests/ui/test_openlook_keyboard.py` drives real XTest keys under Xvfb/olwm.
+It checks forward traversal through both text fields, both checkboxes and
+all four buttons, reverse wrapping, default Find, focused Replace/Replace All
+and Close, and the resulting saved document. Opening and reopening Find
+must focus its first tab stop without a pointer click; the test types directly
+after opening and checks clean application exit. It uses a temporary document
+and preference directory. Captures go to `build/openlook-screenshots/`.
+The scenario also clicks a toolbar combo and captures it after dismissal to
+check that no keyboard-focus arrow remains on an unordered control.
+The physical keyboard scenario passed; toolbar, centered-dialog and Format
+menu captures were visually inspected. These runs use ASan/UBSan with leak
+detection disabled, matching the platform runner.
+Run it in the Open Look SDK with an X display and olwm:
+
+```sh
+python3 -B tests/ui/test_openlook_keyboard.py build/platforms/linux-openlook/debug/bin/fyodor
+```
+
 ## Dialog and persistence review (2026-11-15)
 
 The inventory and filesystem decisions are in
@@ -18,7 +46,7 @@ uses the resulting search behaviour and saves formatted document data. The
 second restores the preferences, checks the displayed zoom and case/whole-word
 behaviour, then loads the saved paragraph/style/tab/page settings. The ordinary
 desktop scenario follows with a clean preference state. It checks all eight
-Find stops in both directions, wrapping, Enter-as-Tab, uncreated/hidden stops,
+Find stops in both directions, wrapping, Enter activation, uncreated/hidden stops,
 reopening focus, native field heights, non-overlap and containment at normal,
 enlarged and undersized requested bounds. All three picker Cancel callbacks
 leave the document unchanged. A forced preference-save error reaches the

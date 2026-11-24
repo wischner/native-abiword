@@ -69,7 +69,7 @@
         }
     },
     "linux-openlook": {
-        "image": "wischner/gcc-x86_64-linux-openlook:latest",
+        "image": "wischner/gcc-x86_64-linux-openlook:1.4.0",
         "cmake": [
             "-DTOOLKIT=OPENLOOK"
         ],

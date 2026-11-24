@@ -52,7 +52,7 @@ struct tool_entry {
     const char *group;
 };
 
-constexpr std::array<tool_entry, 11> tools{{
+constexpr std::array<tool_entry, 12> tools{{
     {"fileNew", native::tool_kind::button, ""},
     {"fileOpen", native::tool_kind::button, ""},
     {"fileSave", native::tool_kind::button, ""},
@@ -64,6 +64,7 @@ constexpr std::array<tool_entry, 11> tools{{
     {"copy", native::tool_kind::button, ""},
     {"paste", native::tool_kind::button, ""},
     {"find", native::tool_kind::button, ""},
+    {"", native::tool_kind::separator, ""},
 }};
 
 // The format bar's plain tools, after its hosted combo boxes.

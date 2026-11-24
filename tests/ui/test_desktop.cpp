@@ -279,6 +279,7 @@ private:
             };
             check_separator(window_.toolbar_, "fileSave", "undo");
             check_separator(window_.toolbar_, "redo", "cut");
+            check_separator(window_.toolbar_, "find", "zoomBox");
             check_separator(window_.format_bar_, "toggleStrike", "alignLeft");
         };
         check_layout();
@@ -534,9 +535,16 @@ private:
         test_find_layout();
         finder.needle_.set_text("hello");
         finder.replacement_.set_text("Howdy");
-        finder.find_button_.on_native_click();
+        CHECK(finder.needle_.on_native_key({key_code::enter,
+            native::key_action::press, false, key_modifiers::none}));
+        finder.needle_.on_native_key({key_code::enter,
+            native::key_action::release, false, key_modifiers::none});
         CHECK(canvas_.view().selection_text() == "Hello");
-        finder.all_button_.on_native_click();
+        finder.all_button_.focus();
+        CHECK(finder.all_button_.on_native_key({key_code::enter,
+            native::key_action::press, false, key_modifiers::none}));
+        finder.all_button_.on_native_key({key_code::enter,
+            native::key_action::release, false, key_modifiers::none});
         CHECK(file_has("Howdy world"));
         CHECK(!file_has("Hello world"));
         finder.destroy();
@@ -544,6 +552,12 @@ private:
 
     void test_find_layout() {
         auto &finder = window_.find_;
+        const auto owner_bounds = window_.get_bounds();
+        const auto dialog_bounds = finder.get_bounds();
+        CHECK(std::abs(2 * dialog_bounds.x1() + dialog_bounds.w() -
+                       (2 * owner_bounds.x1() + owner_bounds.w())) <= 1);
+        CHECK(std::abs(2 * dialog_bounds.y1() + dialog_bounds.h() -
+                       (2 * owner_bounds.y1() + owner_bounds.h())) <= 1);
         const std::array<native::wnd *, 8> controls{
             &finder.needle_, &finder.replacement_, &finder.match_case_,
             &finder.whole_word_, &finder.find_button_, &finder.replace_button_,
@@ -592,7 +606,9 @@ private:
         }
         finder.needle_.on_native_key({key_code::enter,
             native::key_action::press, false, key_modifiers::none});
-        CHECK(focused() == &finder.replacement_);
+        CHECK(focused() == &finder.needle_);
+        finder.needle_.on_native_key({key_code::enter,
+            native::key_action::release, false, key_modifiers::none});
         finder.match_case_.destroy();
         finder.replacement_.on_native_key({key_code::tab,
             native::key_action::press, false, key_modifiers::none});

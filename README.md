@@ -30,6 +30,25 @@ your desktop through its X11 socket.
 `make update-native` moves it to the branch's newest commit. To build against
 your own checkout, pass `NATIVE_ROOT=/path/to/native`.
 
+OPEN LOOK builds and F5 sessions use SDK `1.4.0`, containing OpenLook `v0.5.0`.
+To refresh Native and the SDK, then rebuild and test the Debug application:
+
+```sh
+make update-native
+docker pull wischner/gcc-x86_64-linux-openlook:1.4.0
+python3 -B scripts/build/platforms.py linux-openlook --mode debug
+```
+
+Restart any running OPEN LOOK debug session after updating to load the new SDK.
+The OPEN LOOK toolbar and keyboard fixes are developed directly in `../native`.
+Until those changes are available in the cached dependency, test them with
+`NATIVE_ROOT="$PWD/../native" python3 -B scripts/build/platforms.py linux-openlook --mode debug`.
+The cached Git dependency remains the default, including for F5.
+Toolbar groups use whitespace, hosted combos are centered, and native menu
+groups have blank separator rows. Find and Replace opens over its owner;
+Tab/Shift+Tab visits every control, Enter runs Find from a field or checkbox,
+and Enter on a button runs that button's action.
+
 Native commit `426a42f` or newer is required for form sizing and explicit tab
 order. Native commit `75cdcd4` includes the dialog fixes upstream; configuration
 leaves that revision and its descendants unchanged. Older checkouts receive
