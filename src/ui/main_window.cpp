@@ -201,6 +201,8 @@ main_window::main_window(const app::options &settings)
     const auto &icon = graphics_resources().get("icons.application");
     set_icon(std::shared_ptr<const native::img>(new native::img(
         native::img::decode(icon.data.data(), icon.data.size()))));
+    // Keep the icon label short; the title changes with the document.
+    set_icon_text("Fyodor");
     canvas_.set_parent(this);
     set_scroll_content(&canvas_);
     build_menu();
