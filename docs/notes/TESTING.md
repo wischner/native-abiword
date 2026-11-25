@@ -1,8 +1,24 @@
 # Testing
 
+## Application icons (2026-11-25)
+
+Native is updated to `5643515`. Builds and F5 use `native-openlook-sdk:2`,
+including the current XView separator and button caption fixes. The embedded
+`icons.application` resource selects the 64×64 OPEN LOOK artwork or the
+32×32 GEM/default artwork. Desktop checks verify that the created main window
+has the selected icon, alongside the existing toolbar resource checks.
+
+The OPEN LOOK Debug suite passes 1119/1119 checks. An isolated Xvfb/olwm
+session confirms the minimized window is iconic and its custom icon window
+is viewable. The capture at `build/openlook-screenshots/minimized-icon.png`
+matches the supplied OPEN LOOK PNG. The GEM Debug build succeeds and its
+window-icon checks pass; the full suite passes 1142/1144 checks, with two
+failures in the existing disabled Undo/Redo toolbar ink assertions against
+this Native revision.
+
 ## OPEN LOOK popup separator spacing (2026-11-24)
 
-Builds and F5 now share `native-openlook-sdk:1`, automatically built from
+This review used `native-openlook-sdk:1`, automatically built from
 Native's OPEN LOOK Docker context when absent. Its XView patch makes blank
 popup separators half an OLGX button high, matching olwm desktop menus.
 Sizing, repaint offsets and pointer hit testing use the same row geometry.

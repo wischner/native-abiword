@@ -69,7 +69,7 @@
         }
     },
     "linux-openlook": {
-        "image": "native-openlook-sdk:1",
+        "image": "native-openlook-sdk:2",
         "dockerfile": "{native}/scripts/linux/openlook",
         "cmake": [
             "-DTOOLKIT=OPENLOOK"

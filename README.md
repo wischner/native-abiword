@@ -30,11 +30,11 @@ your desktop through its X11 socket.
 `make update-native` moves it to the branch's newest commit. To build against
 your own checkout, pass `NATIVE_ROOT=/path/to/native`.
 
-OPEN LOOK builds and F5 sessions use `native-openlook-sdk:1`, built automatically
+OPEN LOOK builds and F5 sessions use `native-openlook-sdk:2`, built automatically
 from Native's `scripts/linux/openlook` Docker context when absent. It extends
 SDK `1.4.0` (OpenLook `v0.5.0`) with XView popup separator spacing that matches
-the desktop menu's blank half-button gaps. To refresh Native, then rebuild
-and test the Debug application:
+the desktop menu's blank half-button gaps and button caption fixes. To refresh
+Native, then rebuild and test the Debug application:
 
 ```sh
 make update-native
@@ -129,14 +129,22 @@ leaves the original intact and reports the destination and reason.
 
 ## Desktop icon
 
-Fyodor's desktop icon is [`assets/icons/FYODOR.PNG`](assets/icons/FYODOR.PNG): 32x32
-pixels, black ink on white paper, transparent outside the icon. The build
-copies it next to the executable: `make` writes `bin/FYODOR.PNG`, and every
-release zip has `FYODOR.PNG` beside `fyodor`.
+Fyodor embeds both application icons as variants of `icons.application`:
+[`assets/icons/FYODOR.PNG`](assets/icons/FYODOR.PNG) is the 32×32 GEM icon
+and default, while [`assets/icons/openlook-fyodor.png`](assets/icons/openlook-fyodor.png)
+is the 64×64 OPEN LOOK icon. Native's resource lookup selects the artwork;
+the window passes it to `app_wnd::set_icon()` without backend checks.
+Minimizing the OPEN LOOK window displays its dedicated icon through XView/olwm.
+Native commit `5643515` or newer is required.
 
-To build a GEMiX image, take `FYODOR.PNG` from the `linux-gemix-gemd` release
-zip, convert it with GEM's `resgen` and install it under the lowercase program
-name, matching the program entry `/opt/gem/Programs/fyodor`:
+The build also copies the GEM PNG next to the executable: `make` writes
+`bin/FYODOR.PNG`, and every release zip has `FYODOR.PNG` beside `fyodor`.
+On GEM, Native installs a missing desktop resource automatically when the
+window icon is applied. It preserves any existing desktop icon resource.
+
+To install the corrected icon in a GEMiX image, take `FYODOR.PNG` from the
+`linux-gemix-gemd` release zip, convert it with GEM's `resgen` and install it
+under the lowercase program name, matching `/opt/gem/Programs/fyodor`:
 
 ```sh
 resgen icons -o fyodor.rsc FYODOR.PNG

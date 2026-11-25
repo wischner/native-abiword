@@ -2,6 +2,21 @@
     "version": 1,
     "resources": [
         {
+            "name": "icons.application",
+            "type": "icon",
+            "variants": [
+                {
+                    "file": "../../assets/icons/FYODOR.PNG"
+                },
+                {
+                    "file": "../../assets/icons/openlook-fyodor.png",
+                    "when": {
+                        "toolkit": "openlook"
+                    }
+                }
+            ]
+        },
+        {
             "name": "icons.toolbar.fileNew",
             "type": "icon",
             "variants": [

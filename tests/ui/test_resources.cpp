@@ -66,12 +66,12 @@ void test_highlight() {
 
 void test_resources() {
     const auto &pack = ui::graphics_resources();
-    CHECK(pack.entries().size() == 34);
+    CHECK(pack.entries().size() == 36);
     CHECK(ui::tool_icon("unknown-command") == nullptr);
     const auto automatic = native::resources::current_context();
     int icons = 0;
     for (const auto &entry : pack.entries()) {
-        if (!entry.when.color.empty())
+        if (!entry.name.starts_with("icons.toolbar.") || !entry.when.color.empty())
             continue;
         ++icons;
         CHECK(entry.type == "icon");

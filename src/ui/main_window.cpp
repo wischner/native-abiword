@@ -198,6 +198,9 @@ main_window::main_window(const app::options &settings)
       find_(*this, canvas_, [this](const std::string &text) {
           set_message(text);
       }) {
+    const auto &icon = graphics_resources().get("icons.application");
+    set_icon(std::shared_ptr<const native::img>(new native::img(
+        native::img::decode(icon.data.data(), icon.data.size()))));
     canvas_.set_parent(this);
     set_scroll_content(&canvas_);
     build_menu();

@@ -54,6 +54,7 @@ elseif(CMAKE_CROSSCOMPILING)
 else()
     set(resource_cpp "${CMAKE_BINARY_DIR}/resources/fyodor.cpp")
     file(GLOB resource_images CONFIGURE_DEPENDS src/resources/icons/*/*.png)
+    list(APPEND resource_images assets/icons/FYODOR.PNG assets/icons/openlook-fyodor.png)
     add_custom_command(OUTPUT "${resource_cpp}"
         BYPRODUCTS "${CMAKE_BINARY_DIR}/resources/fyodor.resources"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/resources"

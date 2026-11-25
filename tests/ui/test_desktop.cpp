@@ -106,6 +106,13 @@ public:
     void run_edits() {
         canvas_.stop_caret();
         CHECK(canvas_.get_created());
+        const auto icon = window_.get_icon();
+        CHECK(icon != nullptr);
+        if (icon) {
+            const int edge = native::resources::current_context().toolkit ==
+                "openlook" ? 64 : 32;
+            CHECK(icon->w() == edge && icon->h() == edge);
+        }
         test_resources();
         test_selection();
         test_toolbar_layout();

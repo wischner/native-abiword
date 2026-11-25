@@ -1,5 +1,14 @@
 # Fyodor graphics resources
 
+`icons.application` embeds `assets/icons/FYODOR.PNG` as the 32×32 default/GEM
+icon and `assets/icons/openlook-fyodor.png` as a 64×64 variant qualified by
+`toolkit: openlook`. The main window resolves this resource and calls
+Native's `app_wnd::set_icon()` before creation. Native handles window-manager
+integration, including the minimized XView/olwm icon, without application
+backend checks. Both build systems track these PNGs as resource inputs;
+no external image files are needed at runtime. Native `5643515` or newer
+provides the window icon API and backend support.
+
 `fyodor.json` declares 17 toolbar icons under `icons.toolbar.<command>`.
 Each has an unqualified color PNG and a `color: monochrome` PNG. Native's
 `resources::get()` selects the latter automatically on GEMix and X11.
